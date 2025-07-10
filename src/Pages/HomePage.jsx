@@ -8,7 +8,7 @@ function HomePage() {
                 <div className="bg-two min-h-100 min-w-200 ml-120 mr-120 rounded-md">
                     <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
                         <p className="text-5xl text-four text-center">This is Taletelling</p>
-                        <Link to="/game">
+                        <Link to="/lobby">
                             <button className="bg-three min-h-15 min-w-40 object-center rounded-md">Continue</button>
                         </Link>
                     </div>
