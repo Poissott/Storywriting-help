@@ -9,6 +9,12 @@ export class Users {
         return user;
     }
 
+    changeUsername(id, newUsername) {
+        let user = this.getUser(id);
+        user.username = newUsername;
+        return user;
+    }
+
     getUserList (room) {
         let users = this.users.filter(user => user.room === room);
         return users.map(user => user.username);

@@ -17,7 +17,7 @@ const App = () => {
                         element={<PlayGame />}
                     />
                     <Route
-                        path="/lobby"
+                        path="/lobby/:roomId"
                         element={<Lobby />}
                     />
                 </Routes>

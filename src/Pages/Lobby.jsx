@@ -1,55 +1,55 @@
-import React, {useEffect, useState} from 'react';
-import {Link} from "react-router-dom";
+import React, {useEffect, useRef, useState} from 'react';
+import {Link, useParams} from "react-router-dom";
 import io from "socket.io-client";
 
-const socket = io.connect("http://localhost:3000");
-
-const generateRoomId = () => Math.random().toString(36).substring(2, 8).toUpperCase();
-
-
 function Lobby() {
-    const [room, setRoom] = useState("");
-    const [username, setUsername] = useState("");
-    const [users, setUsers] = useState([]);
-    const [hasJoined, setHasJoined] = useState(false);
+    const {roomId} = useParams();
+    const [userList, setUserList] = useState([]);
+    const socket = useRef(null);
+
+    function handleCopy() {
+        navigator.clipboard.writeText(`http://localhost:5173/lobby/${roomId}`)
+            .then(() => {
+                alert("Room ID copied to clipboard: " + roomId);
+            })
+            .catch(err => {
+                console.error("Failed to copy: ", err);
+            });
+    }
+
+    function handleUserChange(e) {
+        const newUsername = e.target.value;
+        socket.current.emit("changeUsername", { newUsername });
+    }
 
     useEffect(() => {
-        const newRoomId = generateRoomId();
-        setRoom(newRoomId);
+        socket.current = io("http://localhost:3000");
 
-        const tempUsername = "Player" + Math.floor(Math.random() * 1000);
-        setUsername(tempUsername);
+        socket.current.emit("joinRoom", { room: roomId, username: "Player" + Math.floor(Math.random() * 1000) });
 
-        setTimeout(() => {
-            socket.emit("joinRoom", { room: newRoomId, username: tempUsername });
-            setHasJoined(true);
-        }, 100);
-    }, []);
-
-    useEffect(() => {
-        const handleUpdateUsersList = (userList) => {
-            console.log(userList);
-            setUsers(userList);
-        };
-
-        socket.on("updateUsersList", handleUpdateUsersList);
+        const handleUpdateUsersList = (users) => setUserList(users);
+        socket.current.on("updateUsersList", handleUpdateUsersList);
 
         return () => {
-            socket.off("updateUsersList", handleUpdateUsersList);
+            socket.current.off("updateUsersList", handleUpdateUsersList);
+            socket.current.disconnect();
         };
-    }, [])
+    }, [roomId]);
+
 
     return (
         <div className="bg-one ">
             <div className="min-h-screen min-w-screen content-center">
                 <div className="bg-two min-h-100 min-w-200 ml-120 mr-120 rounded-md">
                     <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
-                        <p className="text-3xl text-four text-center">Copy this </p>
+                        <button className="text-3xl text-four text-center" onClick={handleCopy}>Copy this: http://localhost:5173/lobby/{roomId}"</button>
                         <div className="flex items-center justify-center">
                             <ol>
-                                {users.map((username, idx) => (
-                                    <li key={idx}>{username}</li>
-                                ))}
+                                {(userList.map((username, idx) => (
+                                    <li key={idx}>
+                                        <input type="text" defaultValue={username} onChange={handleUserChange} className="text-center"></input>
+                                    </li>
+                                )))}
                             </ol>
                         </div>
                         <Link to="/game">

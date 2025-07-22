@@ -26,6 +26,14 @@ io.on("connection", (socket) => {
         io.to(room).emit("updateUsersList", users.getUserList(room));
     })
 
+    socket.on("changeUsername", ({newUsername}) => {
+        let user = users.changeUsername(socket.id, newUsername);
+        if (user) {
+            io.to(user.room).emit("updateUsersList", users.getUserList(user.room));
+        }
+        console.log(users.getUserList(user.room));
+    })
+
     socket.on("disconnect", () => {
         let user = users.removeUser(socket.id);
         if (user) {
