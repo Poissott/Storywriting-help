@@ -4,16 +4,27 @@ import http from "http";
 import {Server} from "socket.io"
 import cors from "cors"
 import {Users} from "../Utils/users.js";
+import {Client} from "postgresql"
 app.use(cors());
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173",
-        methods: ["GET", "POST"]
+        origin: ["http://localhost:5173", "https://admin.socket.io"],
+        methods: ["GET", "POST"],
+        credentials: true
     }
 });
+
+import { instrument } from "@socket.io/admin-ui";
+instrument(io, {
+    auth: false
+});
+
+const db = new Client({
+    connectionString: "postgresql://localhost/storytelling" });
+await db.connect();
 
 let users = new Users();
 

@@ -19,13 +19,20 @@ function Lobby() {
 
     function handleUserChange(e) {
         const newUsername = e.target.value;
+        localStorage.setItem("username", newUsername);
         socket.current.emit("changeUsername", { newUsername });
     }
 
     useEffect(() => {
         socket.current = io("http://localhost:3000");
 
-        socket.current.emit("joinRoom", { room: roomId, username: "Player" + Math.floor(Math.random() * 1000) });
+        let username = localStorage.getItem("username");
+        if (!username) {
+            username = "Player" + Math.floor(Math.random() * 1000);
+            localStorage.setItem("username", username);
+        }
+
+        socket.current.emit("joinRoom", { room: roomId, username: username});
 
         const handleUpdateUsersList = (users) => setUserList(users);
         socket.current.on("updateUsersList", handleUpdateUsersList);
