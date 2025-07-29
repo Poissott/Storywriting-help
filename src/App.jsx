@@ -13,7 +13,7 @@ const App = () => {
                         element={<HomePage />}
                     />
                     <Route
-                        path="/game"
+                        path="/game/:roomId"
                         element={<PlayGame />}
                     />
                     <Route

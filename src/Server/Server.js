@@ -3,8 +3,7 @@ const app = express();
 import http from "http";
 import {Server} from "socket.io"
 import cors from "cors"
-import {Users} from "../Utils/users.js";
-import {Client} from "postgresql"
+import {Client} from "pg";
 app.use(cors());
 
 const server = http.createServer(app);
@@ -22,33 +21,47 @@ instrument(io, {
     auth: false
 });
 
-const db = new Client({
-    connectionString: "postgresql://localhost/storytelling" });
-await db.connect();
 
-let users = new Users();
+const db = new Client({
+    user: process.env.DB_USER,
+    password: process.env.DB_KEY,
+    host: "localhost",
+    port: 5432,
+    database: "storytelling"
+});
+await db.connect();
 
 io.on("connection", (socket) => {
     console.log("User connected: ", socket.id);
 
-    socket.on("joinRoom", ({room, username}) => {
-        users.addUser(socket.id, username, room);
+    socket.on("joinRoom", async ({room, username}) => {
+        await db.query(
+            "INSERT INTO users (socket_id, username, room) VALUES ($1, $2, $3) ON CONFLICT (socket_id) DO UPDATE SET username = $2, room = $3",
+            [socket.id, username, room]
+        );
         socket.join(room);
-        io.to(room).emit("updateUsersList", users.getUserList(room));
+        const userList = await db.query(
+            "SELECT username FROM users WHERE room = $1",
+            [room]
+        );
+        io.to(room).emit("updateUsersList", userList.rows.map(row => row.username));
     })
 
-    socket.on("changeUsername", ({newUsername}) => {
-        let user = users.changeUsername(socket.id, newUsername);
-        if (user) {
-            io.to(user.room).emit("updateUsersList", users.getUserList(user.room));
+    socket.on("changeUsername", async ({newUsername}) => {
+        const userRes = await db.query("UPDATE users SET username = $1 WHERE socket_id = $2 RETURNING room", [newUsername, socket.id]);
+        const room = userRes.rows[0]?.room;
+        if (room) {
+            const result = await db.query("SELECT username FROM users WHERE room = $1", [room]);
+            io.to(room).emit("updateUsersList", result.rows.map(row => row.username));
         }
-        console.log(users.getUserList(user.room));
     })
 
-    socket.on("disconnect", () => {
-        let user = users.removeUser(socket.id);
-        if (user) {
-            io.to(user.room).emit("updateUsersList", users.getUserList(user.room));
+    socket.on("disconnect", async () => {
+        const userRes = await db.query("DELETE FROM users WHERE socket_id = $1 RETURNING room", [socket.id]);
+        const room = userRes.rows[0]?.room;
+        if (room) {
+            const result = await db.query("SELECT username FROM users WHERE room = $1", [room]);
+            io.to(room).emit("updateUsersList", result.rows.map(u => u.username));
         }
     })
 })
