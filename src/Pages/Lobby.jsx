@@ -32,6 +32,7 @@ function Lobby() {
             localStorage.setItem("username", username);
         }
 
+        socket.current.emit("createRoom", {room_id: roomId});
         socket.current.emit("joinRoom", {room: roomId, username: username});
 
         const handleUpdateUsersList = (users) => setUserList(users);
