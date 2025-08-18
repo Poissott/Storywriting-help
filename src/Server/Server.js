@@ -41,11 +41,11 @@ io.on("connection", (socket) => {
         const res = await db.query("SELECT * FROM rooms WHERE room_id = $1", [room_id]);
         if (res.rows.length === 0) {
             await db.query(
-                "INSERT INTO rooms (room_id, playercount) VALUES ($1, 0)",
+                "INSERT INTO rooms (room_id, playercount) VALUES ($1, 0) ON CONFLICT (room_id) DO NOTHING",
                 [room_id]
             );
         }
-    })
+    });
 
     socket.on("joinRoom", async ({room, username}) => {
         let host;
@@ -90,21 +90,39 @@ io.on("connection", (socket) => {
         io.to(room).emit("enterGame", isHost);
     })
 
-    socket.on("disconnect", async () => {
+    socket.on("createOrder", async ({room_id}) => {
+        const playersInRoomRes = await db.query("SELECT socket_id FROM users WHERE room = $1", [room_id]);
+        const playersInRoom = playersInRoomRes.rows.map(row => row.socket_id);
+        if (playersInRoom.length > 0) {
+            for (let i = 0; i < playersInRoom.length; i++) {
+                const player = playersInRoom[i];
+                await db.query("UPDATE users SET order_nr = $1 WHERE socket_id = $2", [i + 1, player]);
+            }
+            io.to(room_id).emit("orderCreated", playersInRoom.map((socketId, index) => ({
+                socketId,
+                order: index + 1
+            })));
+        }
+    })
+
+    async function handleUserLeave(socket) {
         const userRes = await db.query("DELETE FROM users WHERE socket_id = $1 RETURNING room", [socket.id]);
         const room = userRes.rows[0]?.room;
         if (room) {
+            await db.query("UPDATE rooms SET playercount = playercount - 1 WHERE room_id = $1", [room]);
+            await db.query("DELETE FROM rooms WHERE playercount = 0");
             const result = await db.query("SELECT username, host FROM users WHERE room = $1", [room]);
             io.to(room).emit("updateUsersList", result.rows);
         }
-        await db.query(
-            "UPDATE rooms SET playercount = playercount - 1 WHERE room_id = $1",
-            [room]
-        );
-        await db.query(
-            "DELETE FROM rooms WHERE playercount = 0"
-        );
-    })
+    }
+
+    socket.on("disconnect", async () => {
+        await handleUserLeave(socket);
+    });
+
+    socket.on("leaveRoom", async ({ room: roomId, username }) => {
+        await handleUserLeave(socket);
+    });
 
 })
 server.listen(3000, () => {

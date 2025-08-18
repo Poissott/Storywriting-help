@@ -1,14 +1,14 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Link, useNavigate, useParams} from "react-router-dom";
-import io from "socket.io-client";
+import {Link, useLocation, useNavigate, useParams} from "react-router-dom";
+import socket from "../Server/socket.js";
 
 function Lobby() {
     const {roomId} = useParams();
     const [userList, setUserList] = useState([]);
     const [isHost, setIsHost] = useState(false);
     const [username, setUsername] = useState("");
-    const socket = useRef(null);
     const navigate = useNavigate();
+    const location = useLocation();
 
     function handleCopy() {
         navigator.clipboard.writeText(`http://localhost:5173/lobby/${roomId}`)
@@ -20,16 +20,14 @@ function Lobby() {
         const newUsername = e.target.value;
         localStorage.setItem("username", newUsername);
         setUsername(newUsername);
-        socket.current.emit("changeUsername", {newUsername});
+        socket.emit("changeUsername", {newUsername});
     }
 
     function handleEnterGame() {
-        socket.current.emit("EnterGame", {room: roomId, isHost: isHost})
+        socket.emit("EnterGame", {room: roomId, isHost: isHost})
     }
 
     useEffect(() => {
-        socket.current = io("http://localhost:3000");
-
         let localUsername = localStorage.getItem("username");
         if (!localUsername) {
             localUsername = "Player" + Math.floor(Math.random() * 1000);
@@ -37,14 +35,14 @@ function Lobby() {
         }
         setUsername(localUsername);
 
-        socket.current.emit("createRoom", {room_id: roomId});
-        socket.current.emit("joinRoom", {room: roomId, username: localUsername});
-        socket.current.on("updateUsersList", (users) => setUserList(users));
+        socket.emit("createRoom", {room_id: roomId});
+        socket.emit("joinRoom", {room: roomId, username: localUsername});
+        socket.off("updateUsersList");
+        socket.on("updateUsersList", (users) => setUserList(users));
 
         return () => {
-            socket.current.off("updateUsersList");
-            socket.current.off("hostStatus");
-            socket.current.disconnect();
+            socket.off("updateUsersList");
+            socket.off("hostStatus");
         };
     }, [roomId]);
 
@@ -54,11 +52,20 @@ function Lobby() {
     }, [userList, username]);
 
     useEffect(() => {
-        if (!socket.current) return;
-        socket.current.on("enterGame", (isHost) => {
+        if (!socket) return;
+        socket.on("enterGame", (isHost) => {
             navigate(`/game/${roomId}`);
         })
     });
+
+    useEffect(() => {
+        console.log(location.pathname);
+        return () => {
+            if (!location.pathname.includes("/game/")) {
+                socket.emit("leaveRoom", { room: roomId, username });
+            }
+        };
+    }, [roomId, username]);
 
     let startGameButton;
     if (userList.length === 0) {

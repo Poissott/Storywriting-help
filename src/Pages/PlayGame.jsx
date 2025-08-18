@@ -1,9 +1,11 @@
 import React, {useEffect, useState} from 'react';
 import wordsTxt from "/wordlist.txt";
-import {Link} from "react-router-dom";
+import {Link, useParams} from "react-router-dom";
 import {useQuery} from "@tanstack/react-query";
+import socket from "../Server/socket.js";
 
 function PlayGame() {
+    const {roomId} = useParams();
     const [word, setWord] = useState({word1: "", word2: "", word3: ""});
 
     const getWords = async () => {
@@ -19,6 +21,7 @@ function PlayGame() {
     })
 
     useEffect(() => {
+        socket.emit("createOrder", {room_id: roomId});
         if (Array.isArray(data)) {
             const threeRandom = (data) => {
                 const three = [...data];
