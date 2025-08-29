@@ -7,6 +7,8 @@ import socket from "../Server/socket.js";
 function PlayGame() {
     const {roomId} = useParams();
     const [word, setWord] = useState({word1: "", word2: "", word3: ""});
+    const [order, setOrder] = useState(null);
+    const [userTurn, setUserTurn] = useState(1);
 
     const getWords = async () => {
         const text = await fetch(wordsTxt);
@@ -20,8 +22,21 @@ function PlayGame() {
         staleTime: Infinity
     })
 
+    function handleTextareaChange(e) {
+        this.setState({textareaValue: e.target.value});
+    }
+
+    function handleSectionSubmission() {
+        const sectionValue = this.state.textareaValue;
+        socket.emit("submitSection", {room_id: roomId, order: order, section: sectionValue});
+        socket.on("newUserTurn", (newTurn) => setUserTurn(newTurn));
+    }
+
     useEffect(() => {
-        socket.emit("createOrder", {room_id: roomId});
+        if (order === null) {
+            socket.emit("createOrder", {room_id: roomId});
+        }
+        socket.on("getUserOrder", (order) => setOrder(order));
         if (Array.isArray(data)) {
             const threeRandom = (data) => {
                 const three = [...data];
@@ -36,17 +51,28 @@ function PlayGame() {
         }
     }, [data])
 
-    return (<div className="bg-one ">
+    let playGameView;
+
+    if (order === userTurn) {
+        playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
+            <p className="text-5xl text-four text-center">Your given
+                words {order}: {word.word1}, {word.word2}, {word.word3}</p>
+            <div className="h-150 w-127 bg-one  border-one rounded-md flex flex-col justify-center items-center p-2">
+                <textarea className=" min-h-123 min-w-110 bg-two justify-center items-center text-amber-50 m-2" onChange={handleTextareaChange}></textarea>
+                <button className="bg-three h-15 min-h-15 w-40 justify-center items-center rounded-md m-2" onClick={handleSectionSubmission}>Submit</button>
+            </div>
+        </div>
+    } else {
+        playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
+            <p className="text-5xl text-four text-center">Wait for other players to finish. {order}</p>
+        </div>
+    }
+
+    return (
+        <div className="bg-one ">
         <div className="min-h-screen min-w-screen content-center">
             <div className="bg-two min-h-100 min-w-200 ml-120 mr-120 rounded-md">
-                <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
-                    <p className="text-5xl text-four text-center">Your given
-                        words: {word.word1}, {word.word2}, {word.word3}</p>
-                    <div className="h-150 w-127 bg-one  border-one rounded-md flex flex-col justify-center items-center p-2">
-                        <textarea className=" min-h-123 min-w-110 bg-two justify-center items-center text-amber-50 m-2"></textarea>
-                        <button className="bg-three h-15 min-h-15 w-40 justify-center items-center rounded-md m-2">Submit</button>
-                    </div>
-                </div>
+                {playGameView}
             </div>
         </div>
     </div>);

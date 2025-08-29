@@ -78,8 +78,12 @@ io.on("connection", (socket) => {
     });
 
     socket.on("changeUsername", async ({newUsername}) => {
-        const userRes = await db.query("UPDATE users SET username = $1 WHERE socket_id = $2 RETURNING room", [newUsername, socket.id]);
+        const userRes = await db.query("SELECT host, room FROM users WHERE socket_id = $1", [socket.id]);
+        const host = userRes.rows[0]?.host;
         const room = userRes.rows[0]?.room;
+
+        await db.query("UPDATE users SET username = $1, host = $2 WHERE socket_id = $3", [newUsername, host, socket.id]);
+
         if (room) {
             const result = await db.query("SELECT username, host FROM users WHERE room = $1", [room]);
             io.to(room).emit("updateUsersList", result.rows);
@@ -98,11 +102,35 @@ io.on("connection", (socket) => {
                 const player = playersInRoom[i];
                 await db.query("UPDATE users SET order_nr = $1 WHERE socket_id = $2", [i + 1, player]);
             }
-            io.to(room_id).emit("orderCreated", playersInRoom.map((socketId, index) => ({
-                socketId,
-                order: index + 1
-            })));
+            const orderOfSocketIdRes = await db.query("SELECT order_nr FROM users WHERE socket_id = $1", [socket.id]);
+            const orderOfSocketId = orderOfSocketIdRes.rows[0]?.order_nr;
+            io.to(room_id).emit("getUserOrder", orderOfSocketId);
         }
+    })
+
+    socket.on("submitSection", async ({room_id, order, section}) => {
+        // Section Submission
+        const res = await db.query("SELECT sections FROM users WHERE socket_id = $1", [socket.id]);
+        let sections = res.rows[0]?.sections;
+        if (!sections) {
+            sections = [];
+        } else if (typeof sections === "string") {
+            sections = JSON.parse(sections);
+        }
+        sections[order - 1] = section;
+        await db.query("UPDATE users SET sections = $1 WHERE socket_id = $2", [JSON.stringify(sections), socket.id]);
+
+        // Update user turn
+        const user_turn_res = await db.query("SELECT playercount, user_turn FROM rooms WHERE room_id = $1", [room_id]);
+        let playercount = user_turn_res.rows[0]?.playercount;
+        let user_turn = user_turn_res.rows[0]?.user_turn;
+        if (playercount === user_turn) {
+            user_turn = 1;
+        } else {
+            user_turn += 1;
+        }
+        await db.query("UPDATE rooms SET user_turn = $1 WHERE room_id = $2", [user_turn, room_id]);
+        io.to(room_id).emit("newUserTurn", user_turn);
     })
 
     async function handleUserLeave(socket) {

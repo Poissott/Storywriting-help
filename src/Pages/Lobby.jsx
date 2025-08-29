@@ -58,14 +58,7 @@ function Lobby() {
         })
     });
 
-    useEffect(() => {
-        console.log(location.pathname);
-        return () => {
-            if (!location.pathname.includes("/game/")) {
-                socket.emit("leaveRoom", { room: roomId, username });
-            }
-        };
-    }, [roomId, username]);
+
 
     let startGameButton;
     if (userList.length === 0) {
@@ -113,9 +106,7 @@ function Lobby() {
                                 </div>
                             </div>
                         </div>
-                        <Link to={`/game/${roomId}`}>
-                            {startGameButton}
-                        </Link>
+                        {startGameButton}
                     </div>
                 </div>
             </div>
