@@ -1,12 +1,14 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Link, useLocation, useNavigate, useParams} from "react-router-dom";
 import socket from "../Server/socket.js";
+import Select from "react-select";
 
 function Lobby() {
     const {roomId} = useParams();
     const [userList, setUserList] = useState([]);
     const [isHost, setIsHost] = useState(false);
     const [username, setUsername] = useState("");
+    const [selectedRounds, setSelectedRounds] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -25,6 +27,11 @@ function Lobby() {
 
     function handleEnterGame() {
         socket.emit("EnterGame", {room: roomId, isHost: isHost})
+    }
+
+    function handleSetRounds(selectedOption) {
+        setSelectedRounds(selectedOption);
+        socket.emit("setRounds", {room: roomId, rounds: selectedOption.value});
     }
 
     useEffect(() => {
@@ -61,6 +68,19 @@ function Lobby() {
 
 
     let startGameButton;
+    let setAmountOfRounds;
+    const amountOfRounds = [
+        { value: 1, label: '1' },
+        { value: 2, label: '2' },
+        { value: 3, label: '3' },
+        { value: 4, label: '4' },
+        { value: 5, label: '5' },
+        { value: 6, label: '6' },
+        { value: 7, label: '7' },
+        { value: 8, label: '8' },
+        { value: 9, label: '9' },
+        { value: 10, label: '10' },
+    ]
     if (userList.length === 0) {
         startGameButton = (
             <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
@@ -73,6 +93,14 @@ function Lobby() {
                 Start Game
             </button>
         );
+        setAmountOfRounds = (
+            <Select
+                value={selectedRounds}
+                options={amountOfRounds}
+                onChange={handleSetRounds}
+                placeholder="Select Amount of Rounds"
+            ></Select>
+        )
     } else {
         startGameButton = (
             <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
@@ -107,6 +135,7 @@ function Lobby() {
                             </div>
                         </div>
                         {startGameButton}
+                        {setAmountOfRounds}
                     </div>
                 </div>
             </div>

@@ -90,6 +90,10 @@ io.on("connection", (socket) => {
         }
     })
 
+    socket.on("setRounds", async ({room, rounds}) => {
+        await db.query("UPDATE rooms SET set_rounds = $1 WHERE room_id = $2", [rounds, room]);
+    })
+
     socket.on("EnterGame", async ({room, isHost}) => {
         io.to(room).emit("enterGame", isHost);
     })
@@ -101,31 +105,35 @@ io.on("connection", (socket) => {
             for (let i = 0; i < playersInRoom.length; i++) {
                 const player = playersInRoom[i];
                 await db.query("UPDATE users SET order_nr = $1 WHERE socket_id = $2", [i + 1, player]);
+                io.to(player).emit("getUserOrder", i + 1);
             }
-            const orderOfSocketIdRes = await db.query("SELECT order_nr FROM users WHERE socket_id = $1", [socket.id]);
-            const orderOfSocketId = orderOfSocketIdRes.rows[0]?.order_nr;
-            io.to(room_id).emit("getUserOrder", orderOfSocketId);
         }
     })
 
     socket.on("submitSection", async ({room_id, order, section}) => {
         // Section Submission
-        const res = await db.query("SELECT sections FROM users WHERE socket_id = $1", [socket.id]);
+        const res = await db.query("SELECT sections, section_count FROM users WHERE socket_id = $1", [socket.id]);
         let sections = res.rows[0]?.sections;
+        let section_count = res.rows[0]?.section_count;
         if (!sections) {
             sections = [];
         } else if (typeof sections === "string") {
             sections = JSON.parse(sections);
         }
-        sections[order - 1] = section;
+        sections[section_count] = section;
+        section_count += 1;
+        await db.query("UPDATE users SET section_count = $1 WHERE socket_id = $2", [section_count, socket.id]);
         await db.query("UPDATE users SET sections = $1 WHERE socket_id = $2", [JSON.stringify(sections), socket.id]);
 
         // Update user turn
-        const user_turn_res = await db.query("SELECT playercount, user_turn FROM rooms WHERE room_id = $1", [room_id]);
+        const user_turn_res = await db.query("SELECT playercount, user_turn, total_rounds FROM rooms WHERE room_id = $1", [room_id]);
         let playercount = user_turn_res.rows[0]?.playercount;
         let user_turn = user_turn_res.rows[0]?.user_turn;
+        let total_rounds = user_turn_res.rows[0]?.total_rounds;
         if (playercount === user_turn) {
             user_turn = 1;
+            total_rounds += 1;
+            await db.query("UPDATE rooms SET total_rounds = $1 WHERE room_id = $2", [total_rounds, room_id]);
         } else {
             user_turn += 1;
         }

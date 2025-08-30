@@ -9,6 +9,7 @@ function PlayGame() {
     const [word, setWord] = useState({word1: "", word2: "", word3: ""});
     const [order, setOrder] = useState(null);
     const [userTurn, setUserTurn] = useState(1);
+    const [textareaValue, setTextareaValue] = useState("");
 
     const getWords = async () => {
         const text = await fetch(wordsTxt);
@@ -23,20 +24,25 @@ function PlayGame() {
     })
 
     function handleTextareaChange(e) {
-        this.setState({textareaValue: e.target.value});
+        setTextareaValue(e.target.value);
     }
 
     function handleSectionSubmission() {
-        const sectionValue = this.state.textareaValue;
-        socket.emit("submitSection", {room_id: roomId, order: order, section: sectionValue});
-        socket.on("newUserTurn", (newTurn) => setUserTurn(newTurn));
+        socket.emit("submitSection", {room_id: roomId, order: order, section: textareaValue});
+        setTextareaValue("");
     }
 
     useEffect(() => {
         if (order === null) {
             socket.emit("createOrder", {room_id: roomId});
         }
-        socket.on("getUserOrder", (order) => setOrder(order));
+
+        const handleOrder = (order) => setOrder(order);
+        const handleNewTurn = (newTurn) => setUserTurn(newTurn);
+
+        socket.on("getUserOrder", handleOrder);
+        socket.on("newUserTurn", handleNewTurn);
+
         if (Array.isArray(data)) {
             const threeRandom = (data) => {
                 const three = [...data];
@@ -49,17 +55,26 @@ function PlayGame() {
             const [word1, word2, word3] = threeRandom(data);
             setWord({word1, word2, word3});
         }
-    }, [data])
+
+        return () => {
+            socket.off("getUserOrder", handleOrder);
+            socket.off("newUserTurn", handleNewTurn);
+        }
+    }, [data, order, roomId]);
 
     let playGameView;
+
 
     if (order === userTurn) {
         playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
             <p className="text-5xl text-four text-center">Your given
                 words {order}: {word.word1}, {word.word2}, {word.word3}</p>
             <div className="h-150 w-127 bg-one  border-one rounded-md flex flex-col justify-center items-center p-2">
-                <textarea className=" min-h-123 min-w-110 bg-two justify-center items-center text-amber-50 m-2" onChange={handleTextareaChange}></textarea>
-                <button className="bg-three h-15 min-h-15 w-40 justify-center items-center rounded-md m-2" onClick={handleSectionSubmission}>Submit</button>
+                <textarea className=" min-h-123 min-w-110 bg-two justify-center items-center text-amber-50 m-2"
+                          onChange={handleTextareaChange} value={textareaValue}></textarea>
+                <button className="bg-three h-15 min-h-15 w-40 justify-center items-center rounded-md m-2"
+                        onClick={handleSectionSubmission}>Submit
+                </button>
             </div>
         </div>
     } else {
@@ -68,14 +83,15 @@ function PlayGame() {
         </div>
     }
 
+
     return (
         <div className="bg-one ">
-        <div className="min-h-screen min-w-screen content-center">
-            <div className="bg-two min-h-100 min-w-200 ml-120 mr-120 rounded-md">
-                {playGameView}
+            <div className="min-h-screen min-w-screen content-center">
+                <div className="bg-two min-h-100 min-w-200 ml-120 mr-120 rounded-md">
+                    {playGameView}
+                </div>
             </div>
-        </div>
-    </div>);
+        </div>);
 }
 
 export default PlayGame;    
