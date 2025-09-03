@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import wordsTxt from "/wordlist.txt";
-import {Link, useParams} from "react-router-dom";
+import {Link, useNavigate, useParams} from "react-router-dom";
 import {useQuery} from "@tanstack/react-query";
 import socket from "../Server/socket.js";
 
@@ -10,6 +10,7 @@ function PlayGame() {
     const [order, setOrder] = useState(null);
     const [userTurn, setUserTurn] = useState(1);
     const [textareaValue, setTextareaValue] = useState("");
+    const navigate = useNavigate();
 
     const getWords = async () => {
         const text = await fetch(wordsTxt);
@@ -62,8 +63,14 @@ function PlayGame() {
         }
     }, [data, order, roomId]);
 
-    let playGameView;
+    useEffect(() => {
+        if (!socket) return;
+        socket.on("gameOver", () => {
+            navigate(`/results/${roomId}`);
+        })
+    });
 
+    let playGameView;
 
     if (order === userTurn) {
         playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">

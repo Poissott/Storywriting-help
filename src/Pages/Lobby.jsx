@@ -88,11 +88,6 @@ function Lobby() {
             </button>
         );
     } else if (isHost) {
-        startGameButton = (
-            <button className="bg-three min-h-15 min-w-40 object-center rounded-md" onClick={handleEnterGame}>
-                Start Game
-            </button>
-        );
         setAmountOfRounds = (
             <Select
                 value={selectedRounds}
@@ -101,6 +96,19 @@ function Lobby() {
                 placeholder="Select Amount of Rounds"
             ></Select>
         )
+        if (!selectedRounds) {
+            startGameButton = (
+                <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
+                    Select Rounds
+                </button>
+            );
+        } else {
+            startGameButton = (
+                <button className="bg-three min-h-15 min-w-40 object-center rounded-md" onClick={handleEnterGame}>
+                    Start Game
+                </button>
+            );
+        }
     } else {
         startGameButton = (
             <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>

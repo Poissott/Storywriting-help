@@ -126,19 +126,37 @@ io.on("connection", (socket) => {
         await db.query("UPDATE users SET sections = $1 WHERE socket_id = $2", [JSON.stringify(sections), socket.id]);
 
         // Update user turn
-        const user_turn_res = await db.query("SELECT playercount, user_turn, total_rounds FROM rooms WHERE room_id = $1", [room_id]);
+        const user_turn_res = await db.query("SELECT playercount, user_turn, total_rounds, set_rounds FROM rooms WHERE room_id = $1", [room_id]);
         let playercount = user_turn_res.rows[0]?.playercount;
         let user_turn = user_turn_res.rows[0]?.user_turn;
         let total_rounds = user_turn_res.rows[0]?.total_rounds;
+        let set_rounds = user_turn_res.rows[0]?.set_rounds;
         if (playercount === user_turn) {
             user_turn = 1;
             total_rounds += 1;
             await db.query("UPDATE rooms SET total_rounds = $1 WHERE room_id = $2", [total_rounds, room_id]);
+            if (set_rounds === total_rounds ) {
+                io.to(room_id).emit("gameOver");
+                return;
+            }
         } else {
             user_turn += 1;
         }
         await db.query("UPDATE rooms SET user_turn = $1 WHERE room_id = $2", [user_turn, room_id]);
         io.to(room_id).emit("newUserTurn", user_turn);
+    })
+
+    socket.on("getResults", async ({room_id}) => {
+        const resultsRes = await db.query("SELECT username, sections FROM users WHERE room = $1", [room_id]);
+        const resultsParsed = resultsRes.rows.map(row => {
+            try {
+                return row.sections ? JSON.parse(row.sections) : [];
+            } catch {
+                return [];
+            }
+        });
+        const transposed = resultsParsed[0].map((_, colIndex) => resultsParsed.map(row => row[colIndex]).filter(Boolean)).flat();
+        io.to(room_id).emit("receiveResults", transposed);
     })
 
     async function handleUserLeave(socket) {
