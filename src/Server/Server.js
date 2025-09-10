@@ -94,6 +94,19 @@ io.on("connection", (socket) => {
         await db.query("UPDATE rooms SET set_rounds = $1 WHERE room_id = $2", [rounds, room]);
     })
 
+    socket.on("setTimerPerRound", async ({room, timerPerRound}) => {
+        if (timerPerRound != null) {
+            timerPerRound = timerPerRound * 1000;
+        }
+        await db.query("UPDATE rooms SET set_timer_per_round = $1 WHERE room_id = $2", [timerPerRound, room]);
+    })
+
+    socket.on("getTimerPerRound", async (room) => {
+        const res = await db.query("SELECT set_timer_per_round FROM rooms WHERE room_id = $1", [room]);
+        const timerPerRound = res.rows[0]?.set_timer_per_round;
+        io.to(socket.id).emit("receiveTimerPerRound", timerPerRound);
+    })
+
     socket.on("EnterGame", async ({room, isHost}) => {
         io.to(room).emit("enterGame", isHost);
     })
@@ -149,13 +162,16 @@ io.on("connection", (socket) => {
     socket.on("getResults", async ({room_id}) => {
         const resultsRes = await db.query("SELECT username, sections FROM users WHERE room = $1", [room_id]);
         const resultsParsed = resultsRes.rows.map(row => {
-            try {
-                return row.sections ? JSON.parse(row.sections) : [];
-            } catch {
-                return [];
+            if (Array.isArray(row.sections)) {
+                return row.sections;
             }
         });
-        const transposed = resultsParsed[0].map((_, colIndex) => resultsParsed.map(row => row[colIndex]).filter(Boolean)).flat();
+        let transposed = [];
+        if (resultsParsed.length > 0 && resultsParsed[0].length > 0) {
+            transposed = resultsParsed[0].map((_, colIndex) =>
+                resultsParsed.map(row => row[colIndex]).filter(Boolean)
+            ).flat();
+        }
         io.to(room_id).emit("receiveResults", transposed);
     })
 

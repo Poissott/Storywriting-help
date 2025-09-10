@@ -7,14 +7,17 @@ function Results() {
     const [results, setResults] = useState([]);
 
     useEffect(() => {
-        if (!results.length) {
+        if (results.length === 0) {
             socket.emit("getResults", {room_id: roomId});
-            socket.on("receiveResults", (results) => {
-                setResults(results);
-            });
-
-
         }
+
+        const handleResults = (receivedResults) => {
+            console.log(receivedResults);
+            setResults(receivedResults);
+        }
+
+        socket.on("receiveResults", handleResults);
+
         return () => {
             socket.off("receiveResults");
         };
@@ -28,8 +31,8 @@ function Results() {
                         <p className="text-5xl text-four text-center">This is Taletelling</p>
                         <div>
                             {results.map((section, index) => (
-                                <div key={index} className="mb-4 p-4 border border-gray-300 rounded-lg bg-white shadow-md">
-                                    <p className="text-gray-700 whitespace-pre-wrap">{section}</p>
+                                <div key={index} className="mb-4 p-4 border bg-three rounded-lg bg-three shadow-md">
+                                    <p className="text-four whitespace-pre-wrap">{section}</p>
                                 </div>
                             ))}
                         </div>

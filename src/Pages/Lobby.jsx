@@ -9,6 +9,7 @@ function Lobby() {
     const [isHost, setIsHost] = useState(false);
     const [username, setUsername] = useState("");
     const [selectedRounds, setSelectedRounds] = useState(null);
+    const [selectedTimerPerRound, setSelectedTimerPerRound] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -32,6 +33,11 @@ function Lobby() {
     function handleSetRounds(selectedOption) {
         setSelectedRounds(selectedOption);
         socket.emit("setRounds", {room: roomId, rounds: selectedOption.value});
+    }
+
+    function handleSetTimerPerRound(selectedOption) {
+        setSelectedTimerPerRound(selectedOption);
+        socket.emit("setTimerPerRound", {room: roomId, timerPerRound: selectedOption.value});
     }
 
     useEffect(() => {
@@ -69,6 +75,7 @@ function Lobby() {
 
     let startGameButton;
     let setAmountOfRounds;
+    let setTimerPerRound;
     const amountOfRounds = [
         { value: 1, label: '1' },
         { value: 2, label: '2' },
@@ -80,6 +87,17 @@ function Lobby() {
         { value: 8, label: '8' },
         { value: 9, label: '9' },
         { value: 10, label: '10' },
+    ]
+    const timerPerRoundOptions = [
+        { value: null, label: 'No timer' },
+        { value: 30, label: '30 seconds' },
+        { value: 60, label: '1 minute' },
+        { value: 90, label: '1.5 minutes' },
+        { value: 120, label: '2 minutes' },
+        { value: 150, label: '2.5 minutes' },
+        { value: 180, label: '3 minutes' },
+        { value: 240, label: '4 minutes' },
+        { value: 300, label: '5 minutes' },
     ]
     if (userList.length === 0) {
         startGameButton = (
@@ -96,7 +114,15 @@ function Lobby() {
                 placeholder="Select Amount of Rounds"
             ></Select>
         )
-        if (!selectedRounds) {
+        setTimerPerRound = (
+            <Select
+                value={selectedTimerPerRound}
+                options={timerPerRoundOptions}
+                onChange={handleSetTimerPerRound}
+                placeholder="Select Timer per Round"
+            ></Select>
+        )
+        if (!selectedRounds || !selectedTimerPerRound) {
             startGameButton = (
                 <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
                     Select Rounds
@@ -143,7 +169,10 @@ function Lobby() {
                             </div>
                         </div>
                         {startGameButton}
-                        {setAmountOfRounds}
+                        <div className="flex items-center justify-center gap-4">
+                            {setAmountOfRounds}
+                            {setTimerPerRound}
+                        </div>
                     </div>
                 </div>
             </div>

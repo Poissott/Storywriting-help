@@ -3,13 +3,17 @@ import wordsTxt from "/wordlist.txt";
 import {Link, useNavigate, useParams} from "react-router-dom";
 import {useQuery} from "@tanstack/react-query";
 import socket from "../Server/socket.js";
+import Countdown from "react-countdown";
 
 function PlayGame() {
     const {roomId} = useParams();
     const [word, setWord] = useState({word1: "", word2: "", word3: ""});
     const [order, setOrder] = useState(null);
     const [userTurn, setUserTurn] = useState(1);
+    const [timer, setTimer] = useState(null);
+    const [endTime, setEndTime] = useState(null);
     const [textareaValue, setTextareaValue] = useState("");
+    const [submitted, setSubmitted] = useState(false);
     const navigate = useNavigate();
 
     const getWords = async () => {
@@ -29,20 +33,35 @@ function PlayGame() {
     }
 
     function handleSectionSubmission() {
+        if (submitted) return;
         socket.emit("submitSection", {room_id: roomId, order: order, section: textareaValue});
         setTextareaValue("");
+        setSubmitted(true);
     }
+
+    useEffect(() => {
+        if (order === userTurn) setSubmitted(false);
+    }, [order, userTurn]);
+
+    useEffect(() => {
+        if (order === userTurn && timer) {
+            setEndTime(Date.now() + timer);
+        }
+    }, [order, userTurn, timer]);
 
     useEffect(() => {
         if (order === null) {
             socket.emit("createOrder", {room_id: roomId});
+            socket.emit("getTimerPerRound", roomId);
         }
 
         const handleOrder = (order) => setOrder(order);
         const handleNewTurn = (newTurn) => setUserTurn(newTurn);
+        const handleTimerPerRound = (timerPerRound) => setTimer(timerPerRound);
 
         socket.on("getUserOrder", handleOrder);
         socket.on("newUserTurn", handleNewTurn);
+        socket.on("receiveTimerPerRound", handleTimerPerRound);
 
         if (Array.isArray(data)) {
             const threeRandom = (data) => {
@@ -60,6 +79,7 @@ function PlayGame() {
         return () => {
             socket.off("getUserOrder", handleOrder);
             socket.off("newUserTurn", handleNewTurn);
+            socket.off("receiveTimerPerRound");
         }
     }, [data, order, roomId]);
 
@@ -69,6 +89,10 @@ function PlayGame() {
             navigate(`/results/${roomId}`);
         })
     });
+
+    const timerRenderer = ({minutes, seconds}) => {
+        return <span className="text-four">{minutes}:{seconds}</span>;
+    };
 
     let playGameView;
 
@@ -83,13 +107,17 @@ function PlayGame() {
                         onClick={handleSectionSubmission}>Submit
                 </button>
             </div>
+            {endTime && (<Countdown
+                date={endTime}
+                renderer={timerRenderer}
+                onComplete={handleSectionSubmission}
+            />)}
         </div>
     } else {
         playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
             <p className="text-5xl text-four text-center">Wait for other players to finish. {order}</p>
         </div>
     }
-
 
     return (
         <div className="bg-one ">
