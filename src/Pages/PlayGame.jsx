@@ -11,6 +11,7 @@ function PlayGame() {
     const [order, setOrder] = useState(null);
     const [userTurn, setUserTurn] = useState(1);
     const [timer, setTimer] = useState(null);
+    const [allowSelectedRandomWords, setAllowSelectedRandomWords] = useState(null);
     const [endTime, setEndTime] = useState(null);
     const [textareaValue, setTextareaValue] = useState("");
     const [submitted, setSubmitted] = useState(false);
@@ -53,15 +54,18 @@ function PlayGame() {
         if (order === null) {
             socket.emit("createOrder", {room_id: roomId});
             socket.emit("getTimerPerRound", roomId);
+            socket.emit("getSelectedRandomWords", roomId);
         }
 
         const handleOrder = (order) => setOrder(order);
         const handleNewTurn = (newTurn) => setUserTurn(newTurn);
         const handleTimerPerRound = (timerPerRound) => setTimer(timerPerRound);
+        const handleSelectedRandomWords = (randomWords) => setAllowSelectedRandomWords(randomWords);
 
         socket.on("getUserOrder", handleOrder);
         socket.on("newUserTurn", handleNewTurn);
         socket.on("receiveTimerPerRound", handleTimerPerRound);
+        socket.on("receiveSelectedRandomWords", handleSelectedRandomWords);
 
         if (Array.isArray(data)) {
             const threeRandom = (data) => {
@@ -80,6 +84,7 @@ function PlayGame() {
             socket.off("getUserOrder", handleOrder);
             socket.off("newUserTurn", handleNewTurn);
             socket.off("receiveTimerPerRound");
+            socket.off("receiveSelectedRandomWords");
         }
     }, [data, order, roomId]);
 
@@ -95,11 +100,25 @@ function PlayGame() {
     };
 
     let playGameView;
+    let randomWordsDiv;
+    let timerDiv;
+
+    if (allowSelectedRandomWords === true) {
+        randomWordsDiv = (
+            <p className="text-5xl text-four text-center">
+                Your given words {order}: {word.word1}, {word.word2}, {word.word3}</p>
+        );
+    } else {
+        timerDiv = endTime && (<Countdown
+            date={endTime}
+            renderer={timerRenderer}
+            onComplete={handleSectionSubmission}
+        />);
+    }
 
     if (order === userTurn) {
         playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
-            <p className="text-5xl text-four text-center">Your given
-                words {order}: {word.word1}, {word.word2}, {word.word3}</p>
+            {randomWordsDiv}
             <div className="h-150 w-127 bg-one  border-one rounded-md flex flex-col justify-center items-center p-2">
                 <textarea className=" min-h-123 min-w-110 bg-two justify-center items-center text-amber-50 m-2"
                           onChange={handleTextareaChange} value={textareaValue}></textarea>
@@ -107,11 +126,7 @@ function PlayGame() {
                         onClick={handleSectionSubmission}>Submit
                 </button>
             </div>
-            {endTime && (<Countdown
-                date={endTime}
-                renderer={timerRenderer}
-                onComplete={handleSectionSubmission}
-            />)}
+            {timerDiv}
         </div>
     } else {
         playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">

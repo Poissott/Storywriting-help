@@ -43,6 +43,10 @@ function Lobby() {
 
     function handleSetRandomWords(selectedOption) {
         setSelectedRandomWords(selectedOption);
+        if (selectedOption.value === true) {
+            setSelectedTimerPerRound(null);
+            socket.emit("setTimerPerRound", {room: roomId, timerPerRound: null});
+        }
         socket.emit("setRandomWords", {room: roomId, randomWords: selectedOption.value});
     }
 
@@ -105,8 +109,8 @@ function Lobby() {
         {value: 300, label: '5 minutes'},
     ]
     const yesOrNo = [
-        {value: 1, label: 'Yes'},
-        {value: 0, label: 'No'},
+        {value: true, label: 'Yes'},
+        {value: false, label: 'No'},
     ]
     if (userList.length === 0) {
         startGameButton = (
@@ -123,14 +127,26 @@ function Lobby() {
                 placeholder="Select Amount of Rounds"
             ></Select>
         )
-        setTimerPerRound = (
-            <Select
-                value={selectedTimerPerRound}
-                options={timerPerRoundOptions}
-                onChange={handleSetTimerPerRound}
-                placeholder="Select Timer per Round"
-            ></Select>
-        )
+        if (selectedRandomWords && selectedRandomWords.value === false) {
+            setTimerPerRound = (
+                <Select
+                    value={selectedTimerPerRound}
+                    options={timerPerRoundOptions}
+                    onChange={handleSetTimerPerRound}
+                    placeholder="Select Timer per Round"
+                ></Select>
+            )
+        } else {
+            setTimerPerRound = (
+                <Select
+                    value={selectedTimerPerRound}
+                    options={timerPerRoundOptions}
+                    onChange={handleSetTimerPerRound}
+                    isDisabled={true}
+                    placeholder="Select Timer per Round (Disabled)"
+                ></Select>
+            )
+        }
         setRandomWords = (
             <Select
                 value={selectedRandomWords}
@@ -139,7 +155,7 @@ function Lobby() {
                 placeholder="Select Random Words"
             ></Select>
         )
-        if (!selectedRounds || !selectedTimerPerRound || !selectedRandomWords) {
+        if ((!selectedRounds || !selectedTimerPerRound || !selectedRandomWords) && (!selectedRounds || !selectedRandomWords || selectedRandomWords.value === false)) {
             startGameButton = (
                 <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
                     Select Rounds

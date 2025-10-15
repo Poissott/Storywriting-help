@@ -107,6 +107,16 @@ io.on("connection", (socket) => {
         io.to(socket.id).emit("receiveTimerPerRound", timerPerRound);
     })
 
+    socket.on("setRandomWords", async ({room, randomWords}) => {
+        await db.query("UPDATE rooms SET set_allow_random_words = $1 WHERE room_id = $2", [randomWords, room]);
+    })
+
+    socket.on("getSelectedRandomWords", async (room) => {
+        const res = await db.query("SELECT set_allow_random_words FROM rooms WHERE room_id = $1", [room]);
+        const randomWords = res.rows[0]?.set_allow_random_words;
+        io.to(socket.id).emit("receiveSelectedRandomWords", randomWords);
+    })
+
     socket.on("EnterGame", async ({room, isHost}) => {
         io.to(room).emit("enterGame", isHost);
     })
