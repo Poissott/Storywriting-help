@@ -99,14 +99,13 @@ function PlayGame() {
         return <span className="text-four">{minutes}:{seconds}</span>;
     };
 
-    let playGameView;
     let randomWordsDiv;
     let timerDiv;
 
     if (allowSelectedRandomWords === true) {
         randomWordsDiv = (
             <p className="text-5xl text-four text-center">
-                Your given words {order}: {word.word1}, {word.word2}, {word.word3}</p>
+                Your given words: {word.word1}, {word.word2}, {word.word3}</p>
         );
     } else {
         timerDiv = endTime && (<Countdown
@@ -116,32 +115,46 @@ function PlayGame() {
         />);
     }
 
-    if (order === userTurn) {
-        playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
-            {randomWordsDiv}
-            <div className="h-150 w-127 bg-one  border-one rounded-md flex flex-col justify-center items-center p-2">
-                <textarea className=" min-h-123 min-w-110 bg-two justify-center items-center text-amber-50 m-2"
-                          onChange={handleTextareaChange} value={textareaValue}></textarea>
-                <button className="bg-three h-15 min-h-15 w-40 justify-center items-center rounded-md m-2"
-                        onClick={handleSectionSubmission}>Submit
-                </button>
-            </div>
-            {timerDiv}
-        </div>
-    } else {
-        playGameView = <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
-            <p className="text-5xl text-four text-center">Wait for other players to finish. {order}</p>
-        </div>
-    }
-
     return (
-        <div className="bg-one ">
-            <div className="min-h-screen min-w-screen content-center">
-                <div className="bg-two min-h-100 min-w-200 ml-120 mr-120 rounded-md">
-                    {playGameView}
-                </div>
-            </div>
-        </div>);
-}
+        <div className="bg-one min-h-screen flex items-center justify-center p-4">
+            <div className="bg-two rounded-2xl shadow-2xl p-8 max-w-3xl w-full">
+                {order === userTurn ? (
+                    <div className="flex flex-col gap-6">
+                        {randomWordsDiv && (
+                            <div className="bg-accent/10 rounded-lg p-6 border-2 border-accent">
+                                <p className="text-three font-bold text-center">{randomWordsDiv}</p>
+                            </div>
+                        )}
 
+                        <div className="flex flex-col gap-3">
+                        <textarea
+                            className="w-full h-64 bg-one text-four border-2 border-accent rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none"
+                            onChange={handleTextareaChange}
+                            value={textareaValue}
+                            placeholder="Write your story section here..."
+                        />
+                            <div className="flex justify-between items-center gap-4">
+                                <button
+                                    className="flex-1 bg-three hover:bg-accent text-one font-bold py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onClick={handleSectionSubmission}
+                                    disabled={submitted}
+                                >
+                                    {submitted ? "Submitted" : "Submit"}
+                                </button>
+                                {timerDiv && (
+                                    <div className="text-2xl font-bold text-warning">{timerDiv}</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-16 gap-4">
+                        <div className="w-12 h-12 border-4 border-three border-t-accent rounded-full animate-spin"></div>
+                        <p className="text-four text-lg">Waiting for Player {order} to finish...</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 export default PlayGame;    

@@ -11,6 +11,7 @@ function Lobby() {
     const [selectedRounds, setSelectedRounds] = useState(null);
     const [selectedTimerPerRound, setSelectedTimerPerRound] = useState(null);
     const [selectedRandomWords, setSelectedRandomWords] = useState(null);
+    const [showRules, setShowRules] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -177,36 +178,81 @@ function Lobby() {
     }
 
     return (
-        <div className="bg-one ">
-            <div className="min-h-screen min-w-screen content-center">
-                <div className="bg-two min-h-100 min-w-200 ml-120 mr-120 rounded-md">
-                    <div className="container flex flex-col justify-center items-center min-h-100 p-7 gap-5">
-                        <button className="text-3xl text-four text-center" onClick={handleCopy}>
-                            Copy this: http://localhost:5173/lobby/{roomId}
-                        </button>
-                        <div className="flex items-center justify-center">
-                            <div className="w-full max-w-sm mx-auto flex flex-col gap-2">
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={handleUserChange}
-                                    className="text-center"
-                                />
-                                <div style={{minHeight: "2rem"}}>
-                                    {userList
-                                        .filter(user => user.username !== username)
-                                        .map((user, idx) => (
-                                            <p key={idx} className="text-center">{user.username}</p>
+        <div className="bg-one min-h-screen flex items-center justify-center p-4 gap-4">
+            <div className="bg-two rounded-2xl shadow-2xl p-8 max-w-2xl w-full">
+                <div className="flex flex-col gap-6">
+                    <button
+                        onClick={handleCopy}
+                        className="bg-three/10 hover:bg-three/20 text-three font-semibold py-3 px-4 rounded-lg transition-colors text-sm md:text-base"
+                    >
+                        📋 Copy Room Link: {roomId}
+                    </button>
+
+                    <div className="bg-one rounded-lg p-6 space-y-4">
+                        <label className="block text-four text-sm font-semibold">Your Username</label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={handleUserChange}
+                            className="w-full bg-two text-four border-2 border-accent rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-accent/50 transition"
+                        />
+
+                        <div className="mt-4">
+                            <p className="text-four text-sm font-semibold mb-2">Players ({userList.length})</p>
+                            <div className="bg-one rounded-lg p-4 min-h-20">
+                                {userList.length === 0 ? (
+                                    <p className="text-four/50">Waiting for players...</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {userList.map((user, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 text-four">
+                                                <span className="w-2 h-2 bg-accent rounded-full"></span>
+                                                {user.username} {user.host === "Host" && <span className="text-three text-xs font-bold">HOST</span>}
+                                            </div>
                                         ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        {startGameButton}
-                        <div className="flex items-center justify-center gap-4">
-                            {setAmountOfRounds}
-                            {setTimerPerRound}
-                            {setRandomWords}
+                    </div>
+
+                    {isHost && (
+                        <div className="bg-one rounded-lg p-6 space-y-4">
+                            <p className="text-four font-semibold">Game Settings</p>
+                            <div className="space-y-3">
+                                {setAmountOfRounds}
+                                {setRandomWords}
+                                {setTimerPerRound}
+                            </div>
                         </div>
+                    )}
+
+                    <div className="flex justify-center pt-4">
+                        {startGameButton}
+                        <button
+                            onClick={() => setShowRules(!showRules)}
+                            className="bg-accent/10 hover:bg-accent/20 text-accent font-semibold py-3 px-6 rounded-lg transition-all duration-200"
+                        >
+                            📖 Rules
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div
+                className={`bg-two rounded-2xl shadow-2xl p-6 transition-all duration-500 transform ${
+                    showRules ? 'opacity-100 translate-x-0 w-72' : 'opacity-0 translate-x-8 pointer-events-none w-0'
+                }`}
+            >
+                <div className="flex flex-col gap-4">
+                    <button
+                        onClick={() => setShowRules(false)}
+                        className="text-accent hover:text-accent/80 text-2xl leading-none self-end"
+                    >
+                        ×
+                    </button>
+                    <h2 className="text-three font-bold text-lg">Game Rules</h2>
+                    <div className="text-four text-sm space-y-3 max-h-96 overflow-y-auto">
+                        <p><span className="text-accent font-semibold">1. Objective:</span> Create a collaborative story by taking turns writing sections.</p>
                     </div>
                 </div>
             </div>
