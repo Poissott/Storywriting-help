@@ -253,6 +253,10 @@ function Lobby() {
                     <h2 className="text-three font-bold text-lg">Game Rules</h2>
                     <div className="text-four text-sm space-y-3 max-h-96 overflow-y-auto">
                         <p><span className="text-accent font-semibold">1. Objective:</span> Create a collaborative story by taking turns writing sections.</p>
+                        <p><span className="text-accent font-semibold">2.1 Mode with random words:</span> Every turn you are given random set of words
+                            that you have to include in exact spelling as you have been given. You can not set time limit per round in this mode.</p>
+                        <p><span className="text-accent font-semibold">2.1 Mode without random words:</span> Write your sections as you wish.
+                            Additionally, you can set time limit per round in this mode.</p>
                     </div>
                 </div>
             </div>
