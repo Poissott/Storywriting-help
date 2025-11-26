@@ -156,7 +156,13 @@ function Lobby() {
                 placeholder="Select Random Words"
             ></Select>
         )
-        if ((!selectedRounds || !selectedTimerPerRound || !selectedRandomWords) && (!selectedRounds || !selectedRandomWords || selectedRandomWords.value === false)) {
+        if (userList.length < 2) {
+            startGameButton = (
+                <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
+                    Waiting for Players
+                </button>
+            );
+        } else if ((!selectedRounds || !selectedTimerPerRound || !selectedRandomWords) && (!selectedRounds || !selectedRandomWords || selectedRandomWords.value === false)) {
             startGameButton = (
                 <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
                     Select Rounds
@@ -252,7 +258,7 @@ function Lobby() {
                     </button>
                     <h2 className="text-three font-bold text-lg">Game Rules</h2>
                     <div className="text-four text-sm space-y-3 max-h-96 overflow-y-auto">
-                        <p><span className="text-accent font-semibold">1. Objective:</span> Create a collaborative story by taking turns writing sections.</p>
+                        <p><span className="text-accent font-semibold">1. Objective:</span> Create a collaborative story by taking turns writing sections. You can play this game with 2 or more players.</p>
                         <p><span className="text-accent font-semibold">2.1 Mode with random words:</span> Every turn you are given random set of words
                             that you have to include in exact spelling as you have been given. You can not set time limit per round in this mode.</p>
                         <p><span className="text-accent font-semibold">2.1 Mode without random words:</span> Write your sections as you wish.

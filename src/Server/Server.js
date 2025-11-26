@@ -6,13 +6,20 @@ import {Server} from "socket.io"
 import cors from "cors"
 import {Client} from "pg";
 
-app.use(cors());
+const rawAllowed = process.env.ALLOWED_ORIGINS;
+const allowedOrigins = rawAllowed.split(",").map(s => s.trim()).filter(Boolean);
+
+app.use(cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+}));
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173", "https://admin.socket.io"],
+        origin: allowedOrigins,
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -20,19 +27,41 @@ const io = new Server(server, {
 
 import {instrument} from "@socket.io/admin-ui";
 
-instrument(io, {
-    auth: false
+if (process.env.ENABLE_SOCKET_ADMIN === "true") {
+    if (!process.env.SOCKET_ADMIN_USER || !process.env.SOCKET_ADMIN_PASS) {
+        console.error("ENABLE_SOCKET_ADMIN is true but SOCKET_ADMIN_USER/PASS is missing. Exiting.");
+        process.exit(1);
+    }
+
+    instrument(io, {
+        auth: {
+            type: "basic",
+            username: process.env.SOCKET_ADMIN_USER,
+            password: process.env.SOCKET_ADMIN_PASS
+        }
+    });
+    console.log("Socket admin UI enabled (protected)");
+} else {
+    console.log("Socket admin UI disabled");
+}
+
+const connectionString = process.env.DATABASE_URL || (() => {
+    const user = process.env.DB_USER;
+    const password = process.env.DB_KEY;
+    const host = process.env.DB_HOST;
+    const port = process.env.DB_PORT;
+    const database = process.env.DB_NAME;
+    return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+})();
+const db = new Client({connectionString});
+
+await db.connect().then(() => {
+    console.log("Connected to database");
+}).catch((err) => {
+    console.error("Failed to connect to database:", err);
+    process.exit(1);
 });
 
-
-const db = new Client({
-    user: process.env.DB_USER,
-    password: process.env.DB_KEY,
-    host: "localhost",
-    port: 5432,
-    database: "storytelling"
-});
-await db.connect();
 
 io.on("connection", (socket) => {
     console.log("User connected: ", socket.id);
@@ -48,6 +77,8 @@ io.on("connection", (socket) => {
     });
 
     socket.on("joinRoom", async ({room, username}) => {
+        await touchRoom(room);
+
         let host;
         const roomRes = await db.query("SELECT playercount FROM rooms WHERE room_id = $1", [room]);
         if (!roomRes.rows[0]) {
@@ -91,10 +122,14 @@ io.on("connection", (socket) => {
     })
 
     socket.on("setRounds", async ({room, rounds}) => {
+        await touchRoom(room);
+
         await db.query("UPDATE rooms SET set_rounds = $1 WHERE room_id = $2", [rounds, room]);
     })
 
     socket.on("setTimerPerRound", async ({room, timerPerRound}) => {
+        await touchRoom(room);
+
         if (timerPerRound != null) {
             timerPerRound = timerPerRound * 1000;
         }
@@ -102,26 +137,36 @@ io.on("connection", (socket) => {
     })
 
     socket.on("getTimerPerRound", async (room) => {
+        await touchRoom(room);
+
         const res = await db.query("SELECT set_timer_per_round FROM rooms WHERE room_id = $1", [room]);
         const timerPerRound = res.rows[0]?.set_timer_per_round;
         io.to(socket.id).emit("receiveTimerPerRound", timerPerRound);
     })
 
     socket.on("setRandomWords", async ({room, randomWords}) => {
+        await touchRoom(room);
+
         await db.query("UPDATE rooms SET set_allow_random_words = $1 WHERE room_id = $2", [randomWords, room]);
     })
 
     socket.on("getSelectedRandomWords", async (room) => {
+        await touchRoom(room);
+
         const res = await db.query("SELECT set_allow_random_words FROM rooms WHERE room_id = $1", [room]);
         const randomWords = res.rows[0]?.set_allow_random_words;
         io.to(socket.id).emit("receiveSelectedRandomWords", randomWords);
     })
 
     socket.on("EnterGame", async ({room, isHost}) => {
+        await touchRoom(room);
+
         io.to(room).emit("enterGame", isHost);
     })
 
     socket.on("createOrder", async ({room_id}) => {
+        await touchRoom(room_id);
+
         const playersInRoomRes = await db.query("SELECT socket_id FROM users WHERE room = $1", [room_id]);
         const playersInRoom = playersInRoomRes.rows.map(row => row.socket_id);
         if (playersInRoom.length > 0) {
@@ -134,6 +179,8 @@ io.on("connection", (socket) => {
     })
 
     socket.on("submitSection", async ({room_id, order, section}) => {
+        await touchRoom(room_id);
+
         // Section Submission
         const res = await db.query("SELECT sections, section_count FROM users WHERE socket_id = $1", [socket.id]);
         let sections = res.rows[0]?.sections;
@@ -170,6 +217,8 @@ io.on("connection", (socket) => {
     })
 
     socket.on("getResults", async ({room_id}) => {
+        await touchRoom(room_id);
+
         const resultsRes = await db.query("SELECT username, sections FROM users WHERE room = $1", [room_id]);
         const resultsParsed = resultsRes.rows.map(row => {
             if (Array.isArray(row.sections)) {
@@ -196,6 +245,13 @@ io.on("connection", (socket) => {
         }
     }
 
+    async function touchRoom(room_id) {
+        await db.query(
+            "UPDATE rooms SET last_activity = $1 WHERE room_id = $2",
+            [Date.now(), room_id]
+        );
+    }
+
     socket.on("disconnect", async () => {
         await handleUserLeave(socket);
     });
@@ -205,6 +261,15 @@ io.on("connection", (socket) => {
     });
 
 })
+
+const ROOM_LIFETIME = 1000 * 60 * 30;
+
+setInterval(async () => {
+    const threshold = Date.now() - ROOM_LIFETIME;
+    await db.query("DELETE FROM rooms WHERE last_activity < $1", [threshold]);
+    console.log("Cleaned old rooms");
+}, 60 * 1000);
+
 server.listen(3000, () => {
     console.log("Server listening on port 3000");
 })
