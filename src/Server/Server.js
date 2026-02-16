@@ -69,12 +69,11 @@ const connectionString = process.env.DATABASE_URL || (() => {
 
 console.log(`Connection string source: ${process.env.DATABASE_URL ? "DATABASE_URL" : "Individual env vars"}`);
 
-const db = new Client({
-    connectionString,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
+// Log the connection string with password masked
+if (process.env.DATABASE_URL) {
+    const masked = process.env.DATABASE_URL.replace(/:[^@]+@/, ":****@");
+    console.log(`DATABASE_URL (masked): ${masked}`);
+}
 
 await db.connect().then(() => {
     console.log("✓ Connected to database successfully");
