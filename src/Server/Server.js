@@ -304,7 +304,7 @@ setInterval(async () => {
 const port = Number(process.env.PORT) || 8080;
 
 // Catch-all: serve index.html for client-side routing
-app.get("*", (req, res) => {
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, "../../dist/index.html"));
 });
 
