@@ -14,6 +14,10 @@ import {Client} from "pg";
 const rawAllowed = process.env.ALLOWED_ORIGINS || "";
 const allowedOrigins = rawAllowed.split(",").map(s => s.trim()).filter(Boolean);
 
+console.log("CORS Configuration:");
+console.log(`  ALLOWED_ORIGINS env var: ${process.env.ALLOWED_ORIGINS || "NOT SET"}`);
+console.log(`  Parsed origins:`, allowedOrigins.length ? allowedOrigins : ["ALL (permissive mode)"]);
+
 app.use(cors({
     origin: allowedOrigins.length ? allowedOrigins : true,
     methods: ["GET", "POST"],
