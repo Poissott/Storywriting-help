@@ -26,6 +26,11 @@ app.use(cors({
 
 const server = http.createServer(app);
 
+// Test endpoint to verify server is running
+app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 const io = new Server(server, {
     cors: {
         origin: allowedOrigins.length ? allowedOrigins : true,
@@ -100,6 +105,11 @@ await db.connect().then(() => {
 
 io.on("connection", (socket) => {
     console.log("User connected: ", socket.id);
+    console.log(`[SOCKET] Total connected clients: ${io.engine.clientsCount}`);
+
+    socket.on("error", (error) => {
+        console.error(`[SOCKET ERROR] Client ${socket.id}:`, error);
+    });
 
     socket.on("createRoom", async ({room_id}) => {
         const res = await db.query("SELECT * FROM rooms WHERE room_id = $1", [room_id]);
