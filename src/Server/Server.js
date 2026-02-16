@@ -112,6 +112,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("joinRoom", async ({room, username}) => {
+        console.log(`[JOIN] User ${username} (${socket.id}) attempting to join room ${room}`);
         await touchRoom(room);
 
         let host;
@@ -122,10 +123,13 @@ io.on("connection", (socket) => {
                 [room]
             );
             host = "Host";
+            console.log(`[JOIN] Created new room ${room}, ${username} is Host`);
         } else if (roomRes.rows[0].playercount === 0) {
             host = "Host";
+            console.log(`[JOIN] Empty room ${room}, ${username} is Host`);
         } else {
             host = "Guest";
+            console.log(`[JOIN] ${username} joining room ${room} as Guest (${roomRes.rows[0].playercount} players already)`);
         }
         await db.query(
             "INSERT INTO users (socket_id, username, room, host) VALUES ($1, $2, $3, $4) ON CONFLICT (socket_id) DO UPDATE SET username = $2, room = $3, host = $4",
@@ -140,6 +144,7 @@ io.on("connection", (socket) => {
             "SELECT username, host FROM users WHERE room = $1",
             [room]
         );
+        console.log(`[JOIN] Room ${room} now has ${userList.rows.length} users:`, userList.rows.map(u => u.username));
         io.to(room).emit("updateUsersList", userList.rows);
     });
 
