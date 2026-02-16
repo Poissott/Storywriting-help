@@ -45,35 +45,41 @@ if (process.env.ENABLE_SOCKET_ADMIN === "true") {
     console.log("Socket admin UI disabled");
 }
 
-const connectionString = process.env.DATABASE_URL || (() => {
+const connectionString = (() => {
+    // Check if individual DB vars are set first
     const user = process.env.DB_USER;
     const password = process.env.DB_KEY;
     const host = process.env.DB_HOST;
     const port = process.env.DB_PORT;
     const database = process.env.DB_NAME;
 
-    console.log("Building connection string from env vars:");
-    console.log(`  DB_USER: ${user ? "SET" : "NOT SET"}`);
-    console.log(`  DB_KEY: ${password ? "SET" : "NOT SET"}`);
-    console.log(`  DB_HOST: ${host || "NOT SET"}`);
-    console.log(`  DB_PORT: ${port || "NOT SET"}`);
-    console.log(`  DB_NAME: ${database || "NOT SET"}`);
-
-    if (!user || !password || !host || !port || !database) {
-        console.error("ERROR: Missing required database env vars. Using DATABASE_URL env var instead.");
-        return "";
+    if (user && password && host && port && database) {
+        console.log("Using individual DB environment variables");
+        console.log(`  DB_USER: SET`);
+        console.log(`  DB_KEY: SET`);
+        console.log(`  DB_HOST: ${host}`);
+        console.log(`  DB_PORT: ${port}`);
+        console.log(`  DB_NAME: ${database}`);
+        return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
     }
 
-    return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+    // Fall back to DATABASE_URL if individual vars not set
+    if (process.env.DATABASE_URL) {
+        console.log("Using DATABASE_URL environment variable");
+        return process.env.DATABASE_URL;
+    }
+
+    // Neither set - error
+    console.error("ERROR: No database configuration found. Set either DATABASE_URL or DB_USER/DB_KEY/DB_HOST/DB_PORT/DB_NAME");
+    process.exit(1);
 })();
 
-console.log(`Connection string source: ${process.env.DATABASE_URL ? "DATABASE_URL" : "Individual env vars"}`);
-
-// Log the connection string with password masked
-if (process.env.DATABASE_URL) {
-    const masked = process.env.DATABASE_URL.replace(/:[^@]+@/, ":****@");
-    console.log(`DATABASE_URL (masked): ${masked}`);
-}
+const db = new Client({
+    connectionString,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
 
 await db.connect().then(() => {
     console.log("✓ Connected to database successfully");
