@@ -51,8 +51,24 @@ const connectionString = process.env.DATABASE_URL || (() => {
     const host = process.env.DB_HOST;
     const port = process.env.DB_PORT;
     const database = process.env.DB_NAME;
+
+    console.log("Building connection string from env vars:");
+    console.log(`  DB_USER: ${user ? "SET" : "NOT SET"}`);
+    console.log(`  DB_KEY: ${password ? "SET" : "NOT SET"}`);
+    console.log(`  DB_HOST: ${host || "NOT SET"}`);
+    console.log(`  DB_PORT: ${port || "NOT SET"}`);
+    console.log(`  DB_NAME: ${database || "NOT SET"}`);
+
+    if (!user || !password || !host || !port || !database) {
+        console.error("ERROR: Missing required database env vars. Using DATABASE_URL env var instead.");
+        return "";
+    }
+
     return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
 })();
+
+console.log(`Connection string source: ${process.env.DATABASE_URL ? "DATABASE_URL" : "Individual env vars"}`);
+
 const db = new Client({connectionString});
 
 await db.connect().then(() => {
