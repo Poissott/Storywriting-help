@@ -6,11 +6,11 @@ import {Server} from "socket.io"
 import cors from "cors"
 import {Client} from "pg";
 
-const rawAllowed = process.env.ALLOWED_ORIGINS;
+const rawAllowed = process.env.ALLOWED_ORIGINS || "";
 const allowedOrigins = rawAllowed.split(",").map(s => s.trim()).filter(Boolean);
 
 app.use(cors({
-    origin: allowedOrigins,
+    origin: allowedOrigins.length ? allowedOrigins : true,
     methods: ["GET", "POST"],
     credentials: true
 }));
@@ -19,7 +19,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: allowedOrigins,
+        origin: allowedOrigins.length ? allowedOrigins : true,
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -270,6 +270,8 @@ setInterval(async () => {
     console.log("Cleaned old rooms");
 }, 60 * 1000);
 
-server.listen(3000, () => {
-    console.log("Server listening on port 3000");
+const port = Number(process.env.PORT) || 8080;
+
+server.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
 })
