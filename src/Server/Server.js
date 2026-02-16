@@ -69,7 +69,12 @@ const connectionString = process.env.DATABASE_URL || (() => {
 
 console.log(`Connection string source: ${process.env.DATABASE_URL ? "DATABASE_URL" : "Individual env vars"}`);
 
-const db = new Client({connectionString});
+const db = new Client({
+    connectionString,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
 
 await db.connect().then(() => {
     console.log("Connected to database");
