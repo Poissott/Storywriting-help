@@ -16,8 +16,9 @@ function Lobby() {
     const location = useLocation();
 
     function handleCopy() {
-        navigator.clipboard.writeText(`http://localhost:5173/lobby/${roomId}`)
-            .then(() => alert("Room ID copied to clipboard: " + roomId))
+        const shareUrl = `${window.location.origin}/lobby/${roomId}`;
+        navigator.clipboard.writeText(shareUrl)
+            .then(() => alert("Room link copied to clipboard!"))
             .catch(err => console.error("Failed to copy: ", err));
     }
 
