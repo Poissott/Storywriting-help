@@ -1,6 +1,11 @@
 import express from "express"
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use(express.static(path.join(__dirname, "../../dist")));
+
 import http from "http";
 import {Server} from "socket.io"
 import cors from "cors"
@@ -297,6 +302,11 @@ setInterval(async () => {
 }, 60 * 1000);
 
 const port = Number(process.env.PORT) || 8080;
+
+// Catch-all: serve index.html for client-side routing
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../../dist/index.html"));
+});
 
 server.listen(port, () => {
     console.log(`Server listening on port ${port}`);
