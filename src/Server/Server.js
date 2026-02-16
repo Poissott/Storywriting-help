@@ -200,20 +200,24 @@ io.on("connection", (socket) => {
     })
 
     socket.on("createOrder", async ({room_id}) => {
+        console.log(`[GAME] createOrder called for room ${room_id}`);
         await touchRoom(room_id);
 
         const playersInRoomRes = await db.query("SELECT socket_id FROM users WHERE room = $1", [room_id]);
         const playersInRoom = playersInRoomRes.rows.map(row => row.socket_id);
+        console.log(`[GAME] Found ${playersInRoom.length} players in room ${room_id}`);
         if (playersInRoom.length > 0) {
             for (let i = 0; i < playersInRoom.length; i++) {
                 const player = playersInRoom[i];
                 await db.query("UPDATE users SET order_nr = $1 WHERE socket_id = $2", [i + 1, player]);
                 io.to(player).emit("getUserOrder", i + 1);
+                console.log(`[GAME] Assigned order ${i + 1} to player ${player}`);
             }
         }
     })
 
     socket.on("submitSection", async ({room_id, order, section}) => {
+        console.log(`[GAME] submitSection called by ${socket.id} for room ${room_id}, section: "${section.substring(0, 50)}..."`);
         await touchRoom(room_id);
 
         // Section Submission
