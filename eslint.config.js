@@ -25,8 +25,12 @@ export default defineConfig([
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
-    "env": {
-      node: true,
+  },
+  {
+    files: ['src/Server/Server.js', 'test/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      globals: globals.node,
     },
   },
 ])

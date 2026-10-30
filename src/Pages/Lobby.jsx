@@ -1,19 +1,51 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {Link, useLocation, useNavigate, useParams} from "react-router-dom";
+import React, {useState} from 'react';
+import {Link, useParams} from "react-router-dom";
 import socket from "../Server/socket.js";
 import Select from "react-select";
+import {useRoom} from "../Utils/useRoom.js";
+import {getUsername} from "../Utils/session.js";
+
+const amountOfRounds = [
+    {value: 1, label: '1'},
+    {value: 2, label: '2'},
+    {value: 3, label: '3'},
+    {value: 4, label: '4'},
+    {value: 5, label: '5'},
+    {value: 6, label: '6'},
+    {value: 7, label: '7'},
+    {value: 8, label: '8'},
+    {value: 9, label: '9'},
+    {value: 10, label: '10'},
+]
+const timerPerRoundOptions = [
+    {value: null, label: 'No timer'},
+    {value: 30, label: '30 seconds'},
+    {value: 60, label: '1 minute'},
+    {value: 90, label: '1.5 minutes'},
+    {value: 120, label: '2 minutes'},
+    {value: 150, label: '2.5 minutes'},
+    {value: 180, label: '3 minutes'},
+    {value: 240, label: '4 minutes'},
+    {value: 300, label: '5 minutes'},
+]
+const yesOrNo = [
+    {value: true, label: 'Yes'},
+    {value: false, label: 'No'},
+]
 
 function Lobby() {
     const {roomId} = useParams();
-    const [userList, setUserList] = useState([]);
-    const [isHost, setIsHost] = useState(false);
-    const [username, setUsername] = useState("");
-    const [selectedRounds, setSelectedRounds] = useState(null);
-    const [selectedTimerPerRound, setSelectedTimerPerRound] = useState(null);
-    const [selectedRandomWords, setSelectedRandomWords] = useState(null);
+    const {room, me, connected, notFound} = useRoom(roomId, "lobby");
+    const [username, setUsername] = useState(getUsername);
+    const [startError, setStartError] = useState(null);
     const [showRules, setShowRules] = useState(false);
-    const navigate = useNavigate();
-    const location = useLocation();
+
+    const userList = room?.players ?? [];
+    const isHost = Boolean(me?.isHost);
+    const connectedPlayers = userList.filter(user => user.connected).length;
+    const selectedRounds = amountOfRounds.find(option => option.value === room?.rounds) ?? null;
+    const selectedRandomWords = yesOrNo.find(option => option.value === room?.randomWords) ?? null;
+    const selectedTimerPerRound = timerPerRoundOptions.find(option => option.value === (room?.timerSeconds ?? null));
 
     function handleCopy() {
         const shareUrl = `${window.location.origin}/lobby/${roomId}`;
@@ -30,143 +62,80 @@ function Lobby() {
     }
 
     function handleEnterGame() {
-        socket.emit("EnterGame", {room: roomId, isHost: isHost})
+        setStartError(null);
+        socket.emit("startGame", {}, (res) => {
+            if (!res?.ok) setStartError(res?.error ?? "Could not start the game.");
+        });
     }
 
     function handleSetRounds(selectedOption) {
-        setSelectedRounds(selectedOption);
-        socket.emit("setRounds", {room: roomId, rounds: selectedOption.value});
+        socket.emit("updateSettings", {rounds: selectedOption.value});
     }
 
     function handleSetTimerPerRound(selectedOption) {
-        setSelectedTimerPerRound(selectedOption);
-        socket.emit("setTimerPerRound", {room: roomId, timerPerRound: selectedOption.value});
+        socket.emit("updateSettings", {timerSeconds: selectedOption.value});
     }
 
     function handleSetRandomWords(selectedOption) {
-        setSelectedRandomWords(selectedOption);
-        if (selectedOption.value === true) {
-            setSelectedTimerPerRound(null);
-            socket.emit("setTimerPerRound", {room: roomId, timerPerRound: null});
-        }
-        socket.emit("setRandomWords", {room: roomId, randomWords: selectedOption.value});
+        socket.emit("updateSettings", {randomWords: selectedOption.value});
     }
 
-    useEffect(() => {
-        let localUsername = localStorage.getItem("username");
-        if (!localUsername) {
-            localUsername = "Player" + Math.floor(Math.random() * 1000);
-            localStorage.setItem("username", localUsername);
-        }
-        setUsername(localUsername);
-
-        socket.emit("createRoom", {room_id: roomId});
-        socket.emit("joinRoom", {room: roomId, username: localUsername});
-        socket.off("updateUsersList");
-        socket.on("updateUsersList", (users) => setUserList(users));
-
-        return () => {
-            socket.off("updateUsersList");
-            socket.off("hostStatus");
-        };
-    }, [roomId]);
-
-    useEffect(() => {
-        const currentUser = userList.find(u => u.username === username);
-        setIsHost(currentUser?.host === "Host");
-    }, [userList, username]);
-
-    useEffect(() => {
-        if (!socket) return;
-        socket.on("enterGame", (isHost) => {
-            navigate(`/game/${roomId}`);
-        })
-    });
+    if (notFound) {
+        return (
+            <div className="bg-one min-h-screen flex items-center justify-center p-4">
+                <div className="bg-two rounded-2xl shadow-2xl p-8 max-w-2xl w-full flex flex-col items-center gap-4">
+                    <p className="text-four text-lg">This room is no longer available.</p>
+                    <Link to="/" className="text-accent font-semibold">Back to Home</Link>
+                </div>
+            </div>
+        );
+    }
 
     let startGameButton;
-    let setAmountOfRounds;
-    let setTimerPerRound;
-    let setRandomWords;
-    const amountOfRounds = [
-        {value: 1, label: '1'},
-        {value: 2, label: '2'},
-        {value: 3, label: '3'},
-        {value: 4, label: '4'},
-        {value: 5, label: '5'},
-        {value: 6, label: '6'},
-        {value: 7, label: '7'},
-        {value: 8, label: '8'},
-        {value: 9, label: '9'},
-        {value: 10, label: '10'},
-    ]
-    const timerPerRoundOptions = [
-        {value: null, label: 'No timer'},
-        {value: 30, label: '30 seconds'},
-        {value: 60, label: '1 minute'},
-        {value: 90, label: '1.5 minutes'},
-        {value: 120, label: '2 minutes'},
-        {value: 150, label: '2.5 minutes'},
-        {value: 180, label: '3 minutes'},
-        {value: 240, label: '4 minutes'},
-        {value: 300, label: '5 minutes'},
-    ]
-    const yesOrNo = [
-        {value: true, label: 'Yes'},
-        {value: false, label: 'No'},
-    ]
-    if (userList.length === 0) {
+    const setAmountOfRounds = (
+        <Select
+            value={selectedRounds}
+            options={amountOfRounds}
+            onChange={handleSetRounds}
+            isDisabled={!isHost}
+            placeholder="Select Amount of Rounds"
+        ></Select>
+    );
+    const setTimerPerRound = (
+        <Select
+            value={selectedTimerPerRound}
+            options={timerPerRoundOptions}
+            onChange={handleSetTimerPerRound}
+            isDisabled={!isHost || room?.randomWords !== false}
+            placeholder="Select Timer per Round"
+        ></Select>
+    );
+    const setRandomWords = (
+        <Select
+            value={selectedRandomWords}
+            options={yesOrNo}
+            onChange={handleSetRandomWords}
+            isDisabled={!isHost}
+            placeholder="Select Random Words"
+        ></Select>
+    );
+    if (!connected || userList.length === 0) {
         startGameButton = (
             <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
-                Waiting
+                {connected ? "Waiting" : "Reconnecting..."}
             </button>
         );
     } else if (isHost) {
-        setAmountOfRounds = (
-            <Select
-                value={selectedRounds}
-                options={amountOfRounds}
-                onChange={handleSetRounds}
-                placeholder="Select Amount of Rounds"
-            ></Select>
-        )
-        if (selectedRandomWords && selectedRandomWords.value === false) {
-            setTimerPerRound = (
-                <Select
-                    value={selectedTimerPerRound}
-                    options={timerPerRoundOptions}
-                    onChange={handleSetTimerPerRound}
-                    placeholder="Select Timer per Round"
-                ></Select>
-            )
-        } else {
-            setTimerPerRound = (
-                <Select
-                    value={selectedTimerPerRound}
-                    options={timerPerRoundOptions}
-                    onChange={handleSetTimerPerRound}
-                    isDisabled={true}
-                    placeholder="Select Timer per Round (Disabled)"
-                ></Select>
-            )
-        }
-        setRandomWords = (
-            <Select
-                value={selectedRandomWords}
-                options={yesOrNo}
-                onChange={handleSetRandomWords}
-                placeholder="Select Random Words"
-            ></Select>
-        )
-        if (userList.length < 2) {
+        if (connectedPlayers < 2) {
             startGameButton = (
                 <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
                     Waiting for Players
                 </button>
             );
-        } else if ((!selectedRounds || !selectedTimerPerRound || !selectedRandomWords) && (!selectedRounds || !selectedRandomWords || selectedRandomWords.value === false)) {
+        } else if (!selectedRounds || !selectedRandomWords) {
             startGameButton = (
                 <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
-                    Select Rounds
+                    Select Settings
                 </button>
             );
         } else {
@@ -211,10 +180,10 @@ function Lobby() {
                                     <p className="text-four/50">Waiting for players...</p>
                                 ) : (
                                     <div className="space-y-2">
-                                        {userList.map((user, idx) => (
-                                            <div key={idx} className="flex items-center gap-2 text-four">
+                                        {userList.map((user) => (
+                                            <div key={user.id} className={`flex items-center gap-2 text-four ${user.connected ? "" : "opacity-50"}`}>
                                                 <span className="w-2 h-2 bg-accent rounded-full"></span>
-                                                {user.username} {user.host === "Host" && <span className="text-three text-xs font-bold">HOST</span>}
+                                                {user.username} {user.isHost && <span className="text-three text-xs font-bold">HOST</span>}
                                             </div>
                                         ))}
                                     </div>
@@ -223,15 +192,17 @@ function Lobby() {
                         </div>
                     </div>
 
-                    {isHost && (
-                        <div className="bg-one rounded-lg p-6 space-y-4">
-                            <p className="text-four font-semibold">Game Settings</p>
-                            <div className="space-y-3">
-                                {setAmountOfRounds}
-                                {setRandomWords}
-                                {setTimerPerRound}
-                            </div>
+                    <div className="bg-one rounded-lg p-6 space-y-4">
+                        <p className="text-four font-semibold">Game Settings</p>
+                        <div className="space-y-3">
+                            {setAmountOfRounds}
+                            {setRandomWords}
+                            {setTimerPerRound}
                         </div>
+                    </div>
+
+                    {startError && (
+                        <p className="text-three text-sm font-medium text-center">{startError}</p>
                     )}
 
                     <div className="flex justify-center pt-4">
@@ -262,7 +233,7 @@ function Lobby() {
                         <p><span className="text-accent font-semibold">1. Objective:</span> Create a collaborative story by taking turns writing sections. You can play this game with 2 or more players.</p>
                         <p><span className="text-accent font-semibold">2.1 Mode with random words:</span> Every turn you are given random set of words
                             that you have to include in exact spelling as you have been given. You can not set time limit per round in this mode.</p>
-                        <p><span className="text-accent font-semibold">2.1 Mode without random words:</span> Write your sections as you wish.
+                        <p><span className="text-accent font-semibold">2.2 Mode without random words:</span> Write your sections as you wish.
                             Additionally, you can set time limit per round in this mode.</p>
                     </div>
                 </div>

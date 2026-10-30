@@ -6,8 +6,7 @@ console.log("[Socket] Attempting to connect to:", socketUrl);
 const socket = io(socketUrl, {
     transports: ['websocket', 'polling'],
     reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 5
+    reconnectionDelay: 1000
 });
 
 socket.on("connect", () => {

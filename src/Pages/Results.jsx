@@ -1,27 +1,27 @@
-import React, {useEffect, useState} from "react";
-import {useParams} from "react-router-dom";
-import socket from "../Server/socket.js";
+import React from "react";
+import {Link, useParams} from "react-router-dom";
+import {useRoom} from "../Utils/useRoom.js";
 
 function Results() {
     const {roomId} = useParams();
-    const [results, setResults] = useState([]);
+    const {room, notFound} = useRoom(roomId, "results");
+    const story = room?.story ?? [];
 
-    useEffect(() => {
-        if (results.length === 0) {
-            socket.emit("getResults", {room_id: roomId});
-        }
-
-        const handleResults = (receivedResults) => {
-            console.log(receivedResults);
-            setResults(receivedResults);
-        }
-
-        socket.on("receiveResults", handleResults);
-
-        return () => {
-            socket.off("receiveResults");
-        };
-    }, [results, roomId]);
+    let content;
+    if (notFound) {
+        content = <p className="text-four/50 text-center py-8">This story is no longer available.</p>;
+    } else if (room?.phase !== "finished") {
+        content = <p className="text-four/50 text-center py-8">Loading your story...</p>;
+    } else if (story.length === 0) {
+        content = <p className="text-four/50 text-center py-8">Nobody wrote anything this time.</p>;
+    } else {
+        content = story.map((section, index) => (
+            <div key={index} className="bg-one border-l-4 border-three rounded-lg p-6 hover:shadow-lg transition-shadow">
+                <p className="text-three text-sm font-semibold mb-2">Section {index + 1}</p>
+                <p className="text-four whitespace-pre-wrap leading-relaxed">{section}</p>
+            </div>
+        ));
+    }
 
     return (
         <div className="bg-one min-h-screen flex items-center justify-center p-4">
@@ -32,17 +32,10 @@ function Results() {
                     </div>
 
                     <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {results.length === 0 ? (
-                            <p className="text-four/50 text-center py-8">Loading your story...</p>
-                        ) : (
-                            results.map((section, index) => (
-                                <div key={index} className="bg-one border-l-4 border-three rounded-lg p-6 hover:shadow-lg transition-shadow">
-                                    <p className="text-three text-sm font-semibold mb-2">Section {index + 1}</p>
-                                    <p className="text-four whitespace-pre-wrap leading-relaxed">{section}</p>
-                                </div>
-                            ))
-                        )}
+                        {content}
                     </div>
+
+                    <Link to="/" className="text-accent text-center font-semibold">New Game</Link>
                 </div>
             </div>
         </div>
