@@ -1,8 +1,55 @@
 @import "tailwindcss";
 @tailwind utilities;
 @theme {
-    --color-one: #0F172A;
-    --color-two: #1E293B;
-    --color-three: #3B82F6;
-    --color-four: #F1F5F9;
+    --color-one: #16121F;
+    --color-two: #251E35;
+    --color-three: #F5B544;
+    --color-four: #F6EFE3;
+    --color-accent: #FF7A59;
+    --color-warning: #FFD166;
+
+    --animate-glow: glow 2.5s ease-in-out infinite;
+
+    @keyframes glow {
+        0%, 100% {
+            box-shadow: 0 8px 24px -6px rgb(255 122 89 / 0.5);
+        }
+        50% {
+            box-shadow: 0 10px 40px -2px rgb(245 181 68 / 0.8);
+        }
+    }
+}
+
+@layer components {
+    .btn-hero, .btn-primary, .btn-secondary {
+        @apply inline-flex items-center justify-center rounded-lg font-semibold cursor-pointer transition-all duration-200
+        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-three
+        active:translate-y-0 active:scale-100
+        disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:translate-y-0 disabled:scale-100;
+    }
+
+    /* The one thing to click on a page: starting a new game. */
+    .btn-hero {
+        @apply px-10 py-4 text-xl font-bold text-one bg-linear-to-r from-three to-accent
+        motion-safe:animate-glow hover:-translate-y-1 hover:scale-105 hover:brightness-110;
+    }
+
+    .btn-primary {
+        @apply px-6 py-3 font-bold text-one bg-three shadow-lg
+        enabled:hover:-translate-y-0.5 enabled:hover:bg-warning enabled:hover:shadow-xl enabled:hover:shadow-three/30;
+    }
+
+    .btn-secondary {
+        @apply px-6 py-3 text-three border border-three/40 bg-three/10
+        hover:-translate-y-0.5 hover:bg-three/20 hover:border-three;
+    }
+
+    .link {
+        @apply font-semibold text-accent underline-offset-4 transition-colors hover:text-three hover:underline;
+    }
+
+    .field {
+        @apply w-full bg-two text-four border-2 border-four/15 rounded-lg p-3 transition-colors
+        hover:border-four/30 focus:outline-none focus:border-three focus:ring-2 focus:ring-three/30;
+    }
 }

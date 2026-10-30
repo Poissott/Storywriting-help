@@ -35,7 +35,9 @@ function Results() {
                         {content}
                     </div>
 
-                    <Link to="/" className="text-accent text-center font-semibold">New Game</Link>
+                    <div className="flex justify-center pt-2">
+                        <Link to="/" className="btn-hero">New Game</Link>
+                    </div>
                 </div>
             </div>
         </div>

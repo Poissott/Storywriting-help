@@ -33,6 +33,35 @@ const yesOrNo = [
     {value: false, label: 'No'},
 ]
 
+const selectStyles = {
+    control: (base, state) => ({
+        ...base,
+        backgroundColor: "var(--color-two)",
+        borderColor: state.isFocused ? "var(--color-three)" : "color-mix(in srgb, var(--color-four) 15%, transparent)",
+        borderWidth: 2,
+        borderRadius: "0.5rem",
+        boxShadow: "none",
+        cursor: "pointer",
+        opacity: state.isDisabled ? 0.5 : 1,
+        transition: "border-color 200ms",
+        "&:hover": {borderColor: "var(--color-three)"},
+    }),
+    menu: (base) => ({...base, backgroundColor: "var(--color-two)", borderRadius: "0.5rem", zIndex: 10}),
+    option: (base, state) => ({
+        ...base,
+        cursor: "pointer",
+        color: state.isSelected ? "var(--color-one)" : "var(--color-four)",
+        backgroundColor: state.isSelected
+            ? "var(--color-three)"
+            : state.isFocused ? "color-mix(in srgb, var(--color-three) 20%, transparent)" : "transparent",
+    }),
+    singleValue: (base) => ({...base, color: "var(--color-four)"}),
+    placeholder: (base) => ({...base, color: "color-mix(in srgb, var(--color-four) 60%, transparent)"}),
+    input: (base) => ({...base, color: "var(--color-four)"}),
+    indicatorSeparator: () => ({display: "none"}),
+    dropdownIndicator: (base) => ({...base, color: "var(--color-three)", "&:hover": {color: "var(--color-warning)"}}),
+};
+
 function Lobby() {
     const {roomId} = useParams();
     const {room, me, connected, notFound} = useRoom(roomId, "lobby");
@@ -85,7 +114,7 @@ function Lobby() {
             <div className="bg-one min-h-screen flex items-center justify-center p-4">
                 <div className="bg-two rounded-2xl shadow-2xl p-8 max-w-2xl w-full flex flex-col items-center gap-4">
                     <p className="text-four text-lg">This room is no longer available.</p>
-                    <Link to="/" className="text-accent font-semibold">Back to Home</Link>
+                    <Link to="/" className="link">Back to Home</Link>
                 </div>
             </div>
         );
@@ -98,6 +127,7 @@ function Lobby() {
             options={amountOfRounds}
             onChange={handleSetRounds}
             isDisabled={!isHost}
+            styles={selectStyles}
             placeholder="Select Amount of Rounds"
         ></Select>
     );
@@ -107,6 +137,7 @@ function Lobby() {
             options={timerPerRoundOptions}
             onChange={handleSetTimerPerRound}
             isDisabled={!isHost || room?.randomWords !== false}
+            styles={selectStyles}
             placeholder="Select Timer per Round"
         ></Select>
     );
@@ -116,38 +147,39 @@ function Lobby() {
             options={yesOrNo}
             onChange={handleSetRandomWords}
             isDisabled={!isHost}
+            styles={selectStyles}
             placeholder="Select Random Words"
         ></Select>
     );
     if (!connected || userList.length === 0) {
         startGameButton = (
-            <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
+            <button className="btn-primary min-w-48" disabled>
                 {connected ? "Waiting" : "Reconnecting..."}
             </button>
         );
     } else if (isHost) {
         if (connectedPlayers < 2) {
             startGameButton = (
-                <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
+                <button className="btn-primary min-w-48" disabled>
                     Waiting for Players
                 </button>
             );
         } else if (!selectedRounds || !selectedRandomWords) {
             startGameButton = (
-                <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
+                <button className="btn-primary min-w-48" disabled>
                     Select Settings
                 </button>
             );
         } else {
             startGameButton = (
-                <button className="bg-three min-h-15 min-w-40 object-center rounded-md" onClick={handleEnterGame}>
+                <button className="btn-primary min-w-48" onClick={handleEnterGame}>
                     Start Game
                 </button>
             );
         }
     } else {
         startGameButton = (
-            <button className="bg-three min-h-15 min-w-40 object-center rounded-md" disabled>
+            <button className="btn-primary min-w-48" disabled>
                 Waiting for Host
             </button>
         );
@@ -159,7 +191,7 @@ function Lobby() {
                 <div className="flex flex-col gap-6">
                     <button
                         onClick={handleCopy}
-                        className="bg-three/10 hover:bg-three/20 text-three font-semibold py-3 px-4 rounded-lg transition-colors text-sm md:text-base"
+                        className="btn-secondary text-sm md:text-base"
                     >
                         📋 Copy Room Link: {roomId}
                     </button>
@@ -170,12 +202,12 @@ function Lobby() {
                             type="text"
                             value={username}
                             onChange={handleUserChange}
-                            className="w-full bg-two text-four border-2 border-accent rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-accent/50 transition"
+                            className="field"
                         />
 
                         <div className="mt-4">
                             <p className="text-four text-sm font-semibold mb-2">Players ({userList.length})</p>
-                            <div className="bg-one rounded-lg p-4 min-h-20">
+                            <div className="bg-two/60 rounded-lg p-4 min-h-20">
                                 {userList.length === 0 ? (
                                     <p className="text-four/50">Waiting for players...</p>
                                 ) : (
@@ -205,11 +237,11 @@ function Lobby() {
                         <p className="text-three text-sm font-medium text-center">{startError}</p>
                     )}
 
-                    <div className="flex justify-center pt-4">
+                    <div className="flex flex-wrap justify-center gap-3 pt-4">
                         {startGameButton}
                         <button
                             onClick={() => setShowRules(!showRules)}
-                            className="bg-accent/10 hover:bg-accent/20 text-accent font-semibold py-3 px-6 rounded-lg transition-all duration-200"
+                            className="btn-secondary"
                         >
                             📖 Rules
                         </button>
@@ -217,14 +249,14 @@ function Lobby() {
                 </div>
             </div>
             <div
-                className={`bg-two rounded-2xl shadow-2xl p-6 transition-all duration-500 transform ${
-                    showRules ? 'opacity-100 translate-x-0 w-72' : 'opacity-0 translate-x-8 pointer-events-none w-0'
+                className={`bg-two rounded-2xl shadow-2xl transition-all duration-500 transform ${
+                    showRules ? 'opacity-100 translate-x-0 w-72 p-6' : 'opacity-0 translate-x-8 pointer-events-none w-0 p-0 overflow-hidden'
                 }`}
             >
                 <div className="flex flex-col gap-4">
                     <button
                         onClick={() => setShowRules(false)}
-                        className="text-accent hover:text-accent/80 text-2xl leading-none self-end"
+                        className="text-accent hover:text-three cursor-pointer transition-colors text-2xl leading-none self-end"
                     >
                         ×
                     </button>

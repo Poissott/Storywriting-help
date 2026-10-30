@@ -72,7 +72,7 @@ function PlayGame() {
     }
 
     const timerRenderer = ({minutes, seconds}) => {
-        return <span className="text-four">{zeroPad(minutes)}:{zeroPad(seconds)}</span>;
+        return <span>{zeroPad(minutes)}:{zeroPad(seconds)}</span>;
     };
 
     let notice;
@@ -86,7 +86,7 @@ function PlayGame() {
             <div className="bg-one min-h-screen flex items-center justify-center p-4">
                 <div className="bg-two rounded-2xl shadow-2xl p-8 max-w-3xl w-full flex flex-col items-center gap-4">
                     <p className="text-four text-lg">{notice}</p>
-                    <Link to="/" className="text-accent font-semibold">Back to Home</Link>
+                    <Link to="/" className="link">Back to Home</Link>
                 </div>
             </div>
         );
@@ -121,7 +121,7 @@ function PlayGame() {
 
                         <div className="flex flex-col gap-3">
                         <textarea
-                            className="w-full h-64 bg-one text-four border-2 border-accent rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none"
+                            className="field h-64 !bg-one !p-4 resize-none"
                             onChange={handleTextareaChange}
                             value={textareaValue}
                             maxLength={MAX_SECTION_LENGTH}
@@ -152,7 +152,7 @@ function PlayGame() {
                             )}
                             <div className="flex justify-between items-center gap-4">
                                 <button
-                                    className="flex-1 bg-three hover:bg-accent text-one font-bold py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="btn-primary flex-1"
                                     onClick={handleSectionSubmission}
                                     disabled={submitted || !connected}
                                 >
