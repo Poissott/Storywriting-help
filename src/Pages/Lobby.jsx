@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useRef, useState} from 'react';
 import {Link, useParams} from "react-router-dom";
 import socket from "../Server/socket.js";
 import Select from "react-select";
@@ -66,6 +66,9 @@ function Lobby() {
     const {roomId} = useParams();
     const {room, me, connected, notFound} = useRoom(roomId, "lobby");
     const [username, setUsername] = useState(getUsername);
+    const [usernameError, setUsernameError] = useState(null);
+    const [syncedPlayerId, setSyncedPlayerId] = useState(null);
+    const latestRename = useRef(0);
     const [startError, setStartError] = useState(null);
     const [showRules, setShowRules] = useState(false);
 
@@ -83,11 +86,27 @@ function Lobby() {
             .catch(err => console.error("Failed to copy: ", err));
     }
 
+    // The server may have renamed us on joining ("Bob 2" when Bob is taken), show that name.
+    if (me && me.id !== syncedPlayerId) {
+        setSyncedPlayerId(me.id);
+        setUsername(me.username);
+        setUsernameError(null);
+    }
+
     function handleUserChange(e) {
         const newUsername = e.target.value;
-        localStorage.setItem("username", newUsername);
         setUsername(newUsername);
-        socket.emit("changeUsername", {newUsername});
+        const request = ++latestRename.current;
+        socket.emit("changeUsername", {newUsername}, (res) => {
+            // Answers to earlier keystrokes are out of date.
+            if (request !== latestRename.current) return;
+            if (res?.ok) {
+                localStorage.setItem("username", newUsername.trim());
+                setUsernameError(null);
+            } else {
+                setUsernameError(res?.error ?? "Could not change your username.");
+            }
+        });
     }
 
     function handleEnterGame() {
@@ -202,8 +221,12 @@ function Lobby() {
                             type="text"
                             value={username}
                             onChange={handleUserChange}
-                            className="field"
+                            maxLength={24}
+                            className={`field ${usernameError ? "!border-accent" : ""}`}
                         />
+                        {usernameError && (
+                            <p className="text-accent text-sm font-medium">{usernameError}</p>
+                        )}
 
                         <div className="mt-4">
                             <p className="text-four text-sm font-semibold mb-2">Players ({userList.length})</p>

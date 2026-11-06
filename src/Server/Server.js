@@ -156,7 +156,22 @@ try {
 }
 
 function cleanUsername(username) {
-    return typeof username === "string" ? username.trim().slice(0, MAX_USERNAME_LENGTH) : "";
+    return typeof username === "string" ? username.replace(/\s+/g, " ").trim().slice(0, MAX_USERNAME_LENGTH) : "";
+}
+
+function isNameTaken(players, name, exceptPlayerId) {
+    const lower = name.toLowerCase();
+    return players.some(player => player.player_id !== exceptPlayerId && player.username.toLowerCase() === lower);
+}
+
+// "Bob" becomes "Bob 2", "Bob 3", ... until nobody in the room has it.
+function uniqueUsername(players, name) {
+    if (!isNameTaken(players, name)) return name;
+    for (let i = 2; ; i++) {
+        const suffix = ` ${i}`;
+        const candidate = name.slice(0, MAX_USERNAME_LENGTH - suffix.length).trimEnd() + suffix;
+        if (!isNameTaken(players, candidate)) return candidate;
+    }
 }
 
 function isValidId(id) {
@@ -390,7 +405,7 @@ io.on("connection", (socket) => {
             const publicId = crypto.randomUUID();
             await tx.query(
                 "INSERT INTO game_players (room_id, player_id, public_id, username, is_host, socket_id, disconnected_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-                [roomId, playerId, publicId, name, players.length === 0, socket.id, disconnectedAt]
+                [roomId, playerId, publicId, uniqueUsername(players, name), players.length === 0, socket.id, disconnectedAt]
             );
             socket.data.roomId = roomId;
             socket.data.playerId = playerId;
@@ -411,6 +426,10 @@ io.on("connection", (socket) => {
         const name = cleanUsername(newUsername);
         if (!name) return {ok: false, error: "Username can't be empty."};
         return asPlayer(async (tx, room, player) => {
+            const players = await loadPlayers(tx, room.room_id);
+            if (isNameTaken(players, name, player.player_id)) {
+                return {ok: false, error: `${name} is already taken.`};
+            }
             await tx.query(
                 "UPDATE game_players SET username = $1 WHERE room_id = $2 AND player_id = $3",
                 [name, room.room_id, player.player_id]

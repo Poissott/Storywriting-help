@@ -110,6 +110,40 @@ test("simultaneous joins give exactly one host and everyone a seat", async () =>
     assert.equal(new Set(players[0].state.players.map(player => player.id)).size, 8);
 });
 
+test("same nicknames get numbered on join", async () => {
+    const room = `${runId}-${++roomCounter}`;
+    const players = Array.from({length: 4}, (_, i) => connect(`${room}-${i}`, i === 3 ? "bob" : "Bob"));
+    await Promise.all(players.map(player => waitFor(() => player.socket.connected, "connection")));
+    await Promise.all(players.map(player => join(player, room)));
+    await waitFor(() => players[0].state?.players.length === 4, "all players");
+    const names = players[0].state.players.map(player => player.username.toLowerCase()).sort();
+    assert.deepEqual(names, ["bob", "bob 2", "bob 3", "bob 4"]);
+});
+
+test("renaming to a taken nickname is refused, any case", async () => {
+    const room = `${runId}-${++roomCounter}`;
+    const alice = connect(`${room}-a`, "Alice");
+    const bob = connect(`${room}-b`, "Bob");
+    await join(alice, room);
+    await join(bob, room);
+    assert.equal((await send(bob, "changeUsername", {newUsername: " aLICE "})).ok, false);
+    assert.equal((await send(alice, "changeUsername", {newUsername: "alice"})).ok, true, "own name in another case");
+    assert.equal((await send(bob, "changeUsername", {newUsername: "Robert"})).ok, true);
+    await waitFor(() => bob.state.players.some(player => player.username === "Robert"), "rename");
+    assert.equal(me(bob).username, "Robert");
+});
+
+test("a rejoining player keeps their own nickname", async () => {
+    const room = `${runId}-${++roomCounter}`;
+    const first = connect(`${room}-a`, "Alice");
+    await join(first, room);
+    first.socket.close();
+    const back = connect(`${room}-a`, "Alice");
+    await join(back, room);
+    await waitFor(() => back.state?.players.length === 1, "state");
+    assert.equal(me(back).username, "Alice");
+});
+
 test("only the host can change settings or start", async () => {
     const room = `${runId}-${++roomCounter}`;
     const host = connect(`${room}-h`, "Host");
